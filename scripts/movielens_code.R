@@ -450,7 +450,6 @@ dim(edx_recom_matrix_z_little)
 # See detais with ?evaluationScheme for further tunning
 
 # You will waite for a while... Be patient! It takes long time.
-?evaluationScheme
 
 eval_scheme <- evaluationScheme(edx_recom_matrix_cent, method = "split", train = 0.9, given = 5)
 
@@ -472,6 +471,31 @@ error_random <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
 error_random
 # RMSE      MSE      MAE
 # random 1.450548 2.104089 1.117895
+
+#__UBCF ####
+ubcf_model <- Recommender(train, "UBCF")
+pred_ubcf <- predict(ubcf_model, known, type = "ratings")
+
+#__IBCF ####
+ibcf_model <- Recommender(train, "IBCF")
+pred_ibcf <- predict(ibcf_model, known, type = "ratings")
+
+#__SVD ####
+svd_model <- Recommender(train, "SVD")
+pred_svd <- predict(pred_svd, known, type = "ratings")
+
+#__ALS ####
+als_model <- Recommender(train, "ALS")
+pred_als <- predict(als_model, known, type = "ratings")
+
+# Errors ######
+
+error <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown),
+               "ubcf" = calcPredictionAccuracy(pred_ubcf, unknown),
+               "ibcf" = calcPredictionAccuracy(pred_ibcf, unknown),
+               "svd" = calcPredictionAccuracy(pred_svd, unknown),
+               "als" = calcPredictionAccuracy(pred_als, unknown))
+error
 
 
 
