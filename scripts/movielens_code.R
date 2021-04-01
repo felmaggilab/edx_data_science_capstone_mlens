@@ -385,7 +385,10 @@ edx_recom_matrix_z <- edx_recom_matrix %>%
 
 # edx_recom_matrix_z %>% getRatings %>% hist("Ratings normalized: Z-score") ERROR
 
-# Cleaning data #######
+# ___________________________________########
+# CLEANING DATA ######
+# ___________________________________########
+
 # We will work with users that have ranked at least 10 movies, and with 
 # movies ranked at least 20 times
 # Private Note: depending on results, we will change this paramater.
@@ -400,12 +403,13 @@ rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
 colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
 
 #__________________________________________________________________
+#__________________________________________________________________
 
 # ___________________________________########
 # # CREATING A Little Matrix for Code Testing ########
 # ___________________________________########
 
-# Filtrar menos de 10 pelis rateadas por usuario
+# NOTA: Filtrar menos de 10 pelis rateadas por usuario
 
 set.seed(1970, sample.kind="Rounding")
 edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),]
@@ -437,6 +441,7 @@ edx_recom_matrix_z_little <- edx_recom_matrix_litte %>%
 dim(edx_recom_matrix_z_little)
 
 #__________________________________________________________________
+#__________________________________________________________________
 
 # ___________________________________########
 # EVALUATION SCHEME ######
@@ -444,7 +449,9 @@ dim(edx_recom_matrix_z_little)
 
 # See detais with ?evaluationScheme for further tunning
 
-# You will waite for a while... Be patient!
+# You will waite for a while... Be patient! It takes long time.
+?evaluationScheme
+
 eval_scheme <- evaluationScheme(edx_recom_matrix_cent, method = "split", train = 0.9, given = 5)
 
 # ___________________________________########
@@ -462,8 +469,9 @@ random_model <- Recommender(train, "RANDOM")
 pred_ramdom <- predict(random_model, known, type = "ratings")
 
 error_random <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
-error
-
+error_random
+# RMSE      MSE      MAE
+# random 1.450548 2.104089 1.117895
 
 
 
