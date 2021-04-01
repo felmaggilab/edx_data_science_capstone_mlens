@@ -354,11 +354,20 @@ edx_recom_matrix[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
 image(edx_recom_matrix[1:30, 1:30] %>% getRatingMatrix)
 
 # ___________________________________########
-# MATRIX NORMALIZATION ######
+# # CREATING A Little Matrix for Code Testing ########
 # ___________________________________########
 
-# NOTE: We have normalized rows and columns. Depending on results, maybe we try 
-# with normalized rows only and normalized columns only
+edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),]
+
+edx_recom_matrix_litte <- edx_recom_df_little %>% as("realRatingMatrix") #__as("realRatingMatrix") ####
+
+edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
+
+image(edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix)
+
+# ___________________________________########
+# MATRIX NORMALIZATION ######
+# ___________________________________########
 
 # User Normalization (Rows) #####
 
@@ -376,20 +385,9 @@ edx_recom_matrix_z <- edx_recom_matrix %>%
 
 # edx_recom_matrix_z %>% getRatings %>% hist("Ratings normalized: Z-score") ERROR
 
-# Movie Normalization (Columns) #####
-
-# Center
-edx_recom_matrix_cent <- edx_recom_matrix_cent %>% #__Method = Center #####
-normalize(row = FALSE)
-
-edx_recom_matrix_cent %>% getRatings %>% hist(main = "Ratings normalized: center") 
-
-# Z-score
-edx_recom_matrix_z <- edx_recom_matrix_z %>% 
-  normalize(method="Z-score", row = FALSE) #__Method = Z-score #####
 
 # ___________________________________########
-# I TEST: Centered rows and columns ######
+# I TEST: Centered rows ######
 # ___________________________________########
 
 rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
@@ -412,5 +410,19 @@ eval_scheme <- evaluationScheme(edx_recom_matrix_cent, method = "split", train =
 train <- eval_scheme %>% getData("train")
 known <- eval_scheme %>% getData("known")
 unknown <- eval_scheme %>% getData("unknown")
+
+# Applying Models #####
+
+#__Random ####
+random_model <- Recommender(train, "RANDOM")
+pred_ramdom <- predict(random_model, known, type = "ratings")
+
+error <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
+error
+
+
+
+
+
 
 
