@@ -55,22 +55,30 @@ download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
 ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
                  col.names = c("userId", "movieId", "rating", "timestamp"))
 
+head(ratings)
+
 
 movies <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
 colnames(movies) <- c("movieId", "title", "genres")
 
+head(movies)
+
 
 # if using R 3.6 or earlier:
 # movies <- as.data.frame(movies) %>% mutate(movieId = as.numeric(levels(movieId))[movieId],
-                                          # title = as.character(title),
-                                          # genres = as.character(genres))
+# title = as.character(title),
+# genres = as.character(genres))
 
 # if using R 4.0 or later:
 movies <- as.data.frame(movies) %>% mutate(movieId = as.numeric(movieId),
                                            title = as.character(title),
                                            genres = as.character(genres))
 
+head(movies)
+
 movielens <- left_join(ratings, movies, by = "movieId")
+
+head(movielens)
 
 
 # Creation of test and validation sets ######
@@ -119,10 +127,12 @@ ind <- c(1, 2, 3, 4, 5, 6, 21, 29, 39, 47, 67, 107, 108, 109, 112, 121, 122, 123
 # Creating litlle version
 edx_little <- edx[ind]
 
+edx_little
+
 
 # Adding rating_date and rating_year
 edx_little <- edx_little %>% mutate(rating_date = as_datetime(timestamp), 
-                      rating_year = as.integer(year(rating_date)))
+                                    rating_year = as.integer(year(rating_date)))
 
 class(edx_little$rating_year)
 
@@ -343,19 +353,26 @@ edx_recom_matrix[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
 
 image(edx_recom_matrix[1:30, 1:30] %>% getRatingMatrix)
 
+# ___________________________________########
+# MATRIX NORMALIZATION ######
+# ___________________________________########
+
+# NOTE: We have normalized rows and columns. Depending on results, maybe we try 
+# with normalized rows only and normalized columns only
+
 # User Normalization (Rows) #####
 
 # Center 
 edx_recom_matrix %>%  getRatings %>% hist(main = "Ratings")
 
 edx_recom_matrix_cent <- edx_recom_matrix %>% #__Method = Center #####
-  normalize
+normalize
 
 edx_recom_matrix_cent %>% getRatings %>% hist(main = "Ratings normalized: center") 
 
 # Z-score
 edx_recom_matrix_z <- edx_recom_matrix %>% 
-normalize(method="Z-score") #__Method = Z-score #####
+  normalize(method="Z-score") #__Method = Z-score #####
 
 # edx_recom_matrix_z %>% getRatings %>% hist("Ratings normalized: Z-score") ERROR
 
@@ -371,12 +388,17 @@ edx_recom_matrix_cent %>% getRatings %>% hist(main = "Ratings normalized: center
 edx_recom_matrix_z <- edx_recom_matrix_z %>% 
   normalize(method="Z-score", row = FALSE) #__Method = Z-score #####
 
-# Cleaning ######
+# ___________________________________########
+# I TEST: Centered rows and columns ######
+# ___________________________________########
 
 rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
 colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
 
-# _Test con Norm Center #######
+# Cleaning data #######
+# We will work with users that have ranked at least 10 movies, and with 
+# movies ranked at least 10 times
+# Private Note: dependiing on results, we will change this paramater.
 
 edx_recom_matrix_cent <- edx_recom_matrix_cent[,colCounts(edx_recom_matrix_cent) >= 10]
 
