@@ -49,7 +49,6 @@ library(stringr)
 dl <- tempfile()
 download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
 
-
 # Data wrangling #####
 
 ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
@@ -57,19 +56,20 @@ ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings
 
 head(ratings)
 
-
 movies <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
 colnames(movies) <- c("movieId", "title", "genres")
 
 head(movies)
 
+# __if using R 3.6 or earlier: #####
 
-# if using R 3.6 or earlier:
-# movies <- as.data.frame(movies) %>% mutate(movieId = as.numeric(levels(movieId))[movieId],
+# movies <- as.data.frame(movies) %>% 
+# mutate(movieId = as.numeric(levels(movieId))[movieId],
 # title = as.character(title),
 # genres = as.character(genres))
 
-# if using R 4.0 or later:
+# __if using R 4.0 or later: #######
+
 movies <- as.data.frame(movies) %>% mutate(movieId = as.numeric(movieId),
                                            title = as.character(title),
                                            genres = as.character(genres))
@@ -85,7 +85,9 @@ head(movielens)
 
 # Validation set will be 10% of MovieLens data
 set.seed(1, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1)`
-test_index <- createDataPartition(y = movielens$rating, times = 1, p = 0.1, list = FALSE)
+
+test_index <- createDataPartition(y = movielens$rating, times = 1, 
+                                  p = 0.1, list = FALSE)
 edx <- movielens[-test_index,]
 temp <- movielens[test_index,]
 
@@ -122,25 +124,25 @@ head(edx)
 
 # Creating and index with short and large movie names (with parenthesis), 
 # needed to datawrangling tests
-ind <- c(1, 2, 3, 4, 5, 6, 21, 29, 39, 47, 67, 107, 108, 109, 112, 121, 122, 123, 124, 128)
+ind <- c(1, 2, 3, 4, 5, 6, 21, 29, 39, 47, 67, 107, 108, 109, 112, 121, 
+         122, 123, 124, 128)
 
 # Creating litlle version
 edx_little <- edx[ind]
 
 edx_little
 
-
 # Adding rating_date and rating_year
 edx_little <- edx_little %>% mutate(rating_date = as_datetime(timestamp), 
                                     rating_year = as.integer(year(rating_date)))
-
 class(edx_little$rating_year)
 
 # Creating the new column "movie_year", extracting year from "title"
 
 # We use the "string" package, so if necessary you need to download it
 
-edx_little <- edx_little %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
+edx_little <- edx_little %>% 
+  mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
 
 # Removing (parenthesis)  from "movie_year" column
 movie_years_temp <- edx_little %>% pull(movie_year)
@@ -194,7 +196,6 @@ mu
 #### TEST SET AND TRAIN SET ########
 # ___________________________________########
 
-
 # Creation of test set y validation set from edx data.frame ######
 
 head(edx)
@@ -204,7 +205,6 @@ test_index <- createDataPartition(y = edx$rating, times = 1, p = 0.2,
                                   list = FALSE)
 train_edx <- edx[-test_index,]
 test_edx <- edx[test_index,]
-
 
 # SemiJoin #####
 
@@ -229,8 +229,11 @@ RMSE <- function(true_ratings, pred_ratings) {
 # 25 points: RMSE < 0.86490 ####
 
 # ___________________________________########
-##### TESTING MODELS ######
+##### TESTING BASIC MODELS ######
 # ___________________________________########
+# We will start testing very basic models (included on bibliography of the 
+# course, just for basic testing process)
+
 # _______No reg_________ #####
 
 # Naive ######
@@ -255,7 +258,6 @@ movie_avgs %>%
 b_i <- test_edx %>% 
   left_join(movie_avgs, by = 'movieId') %>% 
   pull(b_i)
-
 
 movie_effect_pred <- mu + b_i
 
@@ -335,7 +337,13 @@ data.frame(naive_rmse, movie_effect_rmse, movie_user_effect_rmse,
 # RECOMMENDER LAB ######
 # ___________________________________########
 
-# Fuente: https://rpubs.com/elias_alegria/intro_recommenderlab
+# As spected, results with Basic Model are very far from goods RMSEs.
+# We will try with recommenderlab package. It include several recommend. Alg.
+# including those that are barely explained in the course (SDV, for example)
+
+# Sources ######
+# https://rpubs.com/elias_alegria/intro_recommenderlab
+# https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf
 
 # Features seleccion: userId, movieID, rating ####
 
@@ -343,7 +351,10 @@ edx_recom_df <- edx %>%  select(user = userId, item = movieId, rating = rating)
 
 # Creation of matrix with recommenderlab structure #####
 
-edx_recom_matrix <- edx_recom_df %>% as("realRatingMatrix") #__as("realRatingMatrix") ####
+edx_recom_matrix <- edx_recom_df %>% 
+  as("realRatingMatrix") #__as("realRatingMatrix") ####
+
+dim(edx_recom_matrix)
 
 # Visualization for first 30 users and first 30 ratings #####
 
@@ -365,7 +376,8 @@ edx_recom_matrix %>%  getRatings %>% hist(main = "Ratings")
 edx_recom_matrix_cent <- edx_recom_matrix %>% #__Method = Center #####
 normalize
 
-edx_recom_matrix_cent %>% getRatings %>% hist(main = "Ratings normalized: center") 
+edx_recom_matrix_cent %>% getRatings %>% 
+  hist(main = "Ratings normalized: center") 
 
 # Z-score
 edx_recom_matrix_z <- edx_recom_matrix %>% 
@@ -373,13 +385,39 @@ edx_recom_matrix_z <- edx_recom_matrix %>%
 
 # edx_recom_matrix_z %>% getRatings %>% hist("Ratings normalized: Z-score") ERROR
 
+# Cleaning data #######
+# We will work with users that have ranked at least 10 movies, and with 
+# movies ranked at least 20 times
+# Private Note: depending on results, we will change this paramater.
+
+rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
+colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
+
+edx_recom_matrix_cent <- 
+  edx_recom_matrix_cent[,colCounts(edx_recom_matrix_cent) >= 20]
+
+rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
+colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
+
+#__________________________________________________________________
+
 # ___________________________________########
 # # CREATING A Little Matrix for Code Testing ########
 # ___________________________________########
 
+# Filtrar menos de 10 pelis rateadas por usuario
+
+set.seed(1970, sample.kind="Rounding")
 edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),]
 
-edx_recom_matrix_litte <- edx_recom_df_little %>% as("realRatingMatrix") #__as("realRatingMatrix") ####
+head(edx_recom_df_little)
+
+edx_recom_matrix_litte <- edx_recom_df_little %>% 
+  as("realRatingMatrix") #__as("realRatingMatrix") ####
+
+dim(edx_recom_matrix_litte)
+
+str(edx_recom_matrix_litte)
 
 edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
 
@@ -387,47 +425,43 @@ image(edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix)
 
 edx_recom_matrix_litte %>%  getRatings %>% hist(main = "Ratings")
 
-edx_recom_matrix_cent_little <- edx_recom_matrix %>% #__Method = Center #####
+edx_recom_matrix_cent_little <- edx_recom_matrix_litte %>% #__Method = Center #####
 normalize
 
-edx_recom_matrix_cent_little %>% getRatings %>% hist(main = "Ratings normalized: center") 
+edx_recom_matrix_cent_little %>% getRatings %>% 
+  hist(main = "Ratings normalized: center") 
 
-edx_recom_matrix_z <- edx_recom_matrix %>% 
+edx_recom_matrix_z_little <- edx_recom_matrix_litte %>% 
   normalize(method="Z-score") #__Method = Z-score #####
 
+dim(edx_recom_matrix_z_little)
+
+#__________________________________________________________________
+
 # ___________________________________########
-# I TEST: LITTLE CENTER ######
+# EVALUATION SCHEME ######
 # ___________________________________########
 
-rowCounts(edx_recom_matrix_cent_little) %>% as("matrix") %>% min
-colCounts(edx_recom_matrix_cent_little) %>% as("matrix") %>% min
-
-# Cleaning data #######
-# We will work with users that have ranked at least 10 movies, and with 
-# movies ranked at least 10 times
-# Private Note: dependiing on results, we will change this paramater.
-
-edx_recom_matrix_cent_little <- 
-  edx_recom_matrix_cent_little[,colCounts(edx_recom_matrix_cent_little) >= 10]
-
-# Evaluation scheme ######
 # See detais with ?evaluationScheme for further tunning
 
-eval_scheme_little <- evaluationScheme(edx_recom_matrix_cent_little, method = "split", train = 0.9, given = 5)
+# You will waite for a while... Be patient!
+eval_scheme <- evaluationScheme(edx_recom_matrix_cent, method = "split", train = 0.9, given = 5)
 
-# Train and test set creation #####
+# ___________________________________########
+# I TEST: CENTER ######
+# ___________________________________########
 
-train_little <- eval_scheme_little %>% getData("train")
-known_little <- eval_scheme_little %>% getData("known")
-unknown_little <- eval_scheme_little %>% getData("unknown")
+train <- eval_scheme %>% getData("train")
+known <- eval_scheme %>% getData("known")
+unknown <- eval_scheme %>% getData("unknown")
 
 # Applying Models #####
 
 #__Random ####
-random_model_little <- Recommender(train, "RANDOM")
-pred_ramdom_little <- predict(random_model, known, type = "ratings")
+random_model <- Recommender(train, "RANDOM")
+pred_ramdom <- predict(random_model, known, type = "ratings")
 
-error_random_little <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
+error_random <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
 error
 
 
