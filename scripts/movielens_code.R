@@ -354,18 +354,6 @@ edx_recom_matrix[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
 image(edx_recom_matrix[1:30, 1:30] %>% getRatingMatrix)
 
 # ___________________________________########
-# # CREATING A Little Matrix for Code Testing ########
-# ___________________________________########
-
-edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),]
-
-edx_recom_matrix_litte <- edx_recom_df_little %>% as("realRatingMatrix") #__as("realRatingMatrix") ####
-
-edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
-
-image(edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix)
-
-# ___________________________________########
 # MATRIX NORMALIZATION ######
 # ___________________________________########
 
@@ -385,39 +373,61 @@ edx_recom_matrix_z <- edx_recom_matrix %>%
 
 # edx_recom_matrix_z %>% getRatings %>% hist("Ratings normalized: Z-score") ERROR
 
+# ___________________________________########
+# # CREATING A Little Matrix for Code Testing ########
+# ___________________________________########
+
+edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),]
+
+edx_recom_matrix_litte <- edx_recom_df_little %>% as("realRatingMatrix") #__as("realRatingMatrix") ####
+
+edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
+
+image(edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix)
+
+edx_recom_matrix_litte %>%  getRatings %>% hist(main = "Ratings")
+
+edx_recom_matrix_cent_little <- edx_recom_matrix %>% #__Method = Center #####
+normalize
+
+edx_recom_matrix_cent_little %>% getRatings %>% hist(main = "Ratings normalized: center") 
+
+edx_recom_matrix_z <- edx_recom_matrix %>% 
+  normalize(method="Z-score") #__Method = Z-score #####
 
 # ___________________________________########
-# I TEST: Centered rows ######
+# I TEST: LITTLE CENTER ######
 # ___________________________________########
 
-rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
-colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
+rowCounts(edx_recom_matrix_cent_little) %>% as("matrix") %>% min
+colCounts(edx_recom_matrix_cent_little) %>% as("matrix") %>% min
 
 # Cleaning data #######
 # We will work with users that have ranked at least 10 movies, and with 
 # movies ranked at least 10 times
 # Private Note: dependiing on results, we will change this paramater.
 
-edx_recom_matrix_cent <- edx_recom_matrix_cent[,colCounts(edx_recom_matrix_cent) >= 10]
+edx_recom_matrix_cent_little <- 
+  edx_recom_matrix_cent_little[,colCounts(edx_recom_matrix_cent_little) >= 10]
 
 # Evaluation scheme ######
 # See detais with ?evaluationScheme for further tunning
 
-eval_scheme <- evaluationScheme(edx_recom_matrix_cent, method = "split", train = 0.9, given = 5)
+eval_scheme_little <- evaluationScheme(edx_recom_matrix_cent_little, method = "split", train = 0.9, given = 5)
 
 # Train and test set creation #####
 
-train <- eval_scheme %>% getData("train")
-known <- eval_scheme %>% getData("known")
-unknown <- eval_scheme %>% getData("unknown")
+train_little <- eval_scheme_little %>% getData("train")
+known_little <- eval_scheme_little %>% getData("known")
+unknown_little <- eval_scheme_little %>% getData("unknown")
 
 # Applying Models #####
 
 #__Random ####
-random_model <- Recommender(train, "RANDOM")
-pred_ramdom <- predict(random_model, known, type = "ratings")
+random_model_little <- Recommender(train, "RANDOM")
+pred_ramdom_little <- predict(random_model, known, type = "ratings")
 
-error <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
+error_random_little <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
 error
 
 
