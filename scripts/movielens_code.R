@@ -409,10 +409,13 @@ colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
 # # CREATING A Little Matrix for Code Testing ########
 # ___________________________________########
 
-# NOTA: Filtrar menos de 10 pelis rateadas por usuario
+# Sampling of 100 k observations, and filtering movies with at least 20 ratings
 
 set.seed(1970, sample.kind="Rounding")
-edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),]
+edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),] %>% 
+  group_by(item) %>% 
+  filter(n() >= 20) %>% 
+  as.data.frame()
 
 head(edx_recom_df_little)
 
@@ -439,6 +442,16 @@ edx_recom_matrix_z_little <- edx_recom_matrix_litte %>%
   normalize(method="Z-score") #__Method = Z-score #####
 
 dim(edx_recom_matrix_z_little)
+
+rowCounts(edx_recom_matrix_cent_little) %>% as("matrix") %>% min
+colCounts(edx_recom_matrix_cent_little) %>% as("matrix") %>% min
+
+edx_recom_matrix_cent_little <- 
+  edx_recom_matrix_cent_little[,colCounts(edx_recom_matrix_cent_little) >= 20]
+
+rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
+colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
+
 
 #__________________________________________________________________
 #__________________________________________________________________
