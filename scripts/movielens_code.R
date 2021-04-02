@@ -406,51 +406,69 @@ colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
 #__________________________________________________________________
 
 # ___________________________________########
-# # CREATING A Little Matrix for Code Testing ########
+# EVALUATION SCHEME LITTLE ######
 # ___________________________________########
 
-# Sampling of 100 k observations, and filtering movies with at least 20 ratings
+# See detais with ?evaluationScheme for further tunning
 
-set.seed(1970, sample.kind="Rounding")
-edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),] %>% 
-  group_by(item) %>% 
-  filter(n() >= 20) %>% 
-  as.data.frame()
+# You will waite for a while... Be patient! It takes long time.
 
-head(edx_recom_df_little)
+eval_scheme_little <- evaluationScheme(edx_recom_matrix_cent[1:600], method = "split", train = 0.9, given = 5)
 
-edx_recom_matrix_litte <- edx_recom_df_little %>% 
-  as("realRatingMatrix") #__as("realRatingMatrix") ####
+# ___________________________________########
+# I TEST: CENTER LITTLE ######
+# ___________________________________########
 
-dim(edx_recom_matrix_litte)
+train_l <- eval_scheme_little %>% getData("train")
+known_l <- eval_scheme_little %>% getData("known")
+unknown_l <- eval_scheme_little %>% getData("unknown")
 
-str(edx_recom_matrix_litte)
+# Applying Models #####
 
-edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
+#__Random ####
+random_model_l <- Recommender(train_l[1:450], "RANDOM")
+pred_ramdom_l <- predict(random_model_l, known_l, type = "ratings")
 
-image(edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix)
+error_random_l <- rbind("random" = calcPredictionAccuracy(pred_ramdom_l, unknown_l))
+error_random_l
+# RMSE      MSE      MAE
+# random 1.424282 2.028579 1.103045
 
-edx_recom_matrix_litte %>%  getRatings %>% hist(main = "Ratings")
+# COMPARING RESULTS with edx entire Matrix
+# RMSE      MSE      MAE
+# random 1.450548 2.104089 1.117895
 
-edx_recom_matrix_cent_little <- edx_recom_matrix_litte %>% #__Method = Center #####
-normalize
+#__UBCF ####
+ubcf_model_l <- Recommender(train_l[1:450], "UBCF")
+pred_ubcf_l <- predict(ubcf_model_l, known_l, type = "ratings")
+error_ubcf_l <- rbind("ubcf" = calcPredictionAccuracy(pred_ubcf_l, unknown_l))
+error_ubcf_l
+# RMSE      MSE       MAE
+# ubcf 1.085612 1.178554 0.8489743
 
-edx_recom_matrix_cent_little %>% getRatings %>% 
-  hist(main = "Ratings normalized: center") 
 
-edx_recom_matrix_z_little <- edx_recom_matrix_litte %>% 
-  normalize(method="Z-score") #__Method = Z-score #####
+#__IBCF ####
+ibcf_model_l <- Recommender(train_l[1:450], "IBCF")
+pred_ibcf_l <- predict(ibcf_model_l, known_l, type = "ratings")
+error_ibcf_l <- rbind("ubcf" = calcPredictionAccuracy(error_ibcf_l, unknown_l))
+error_ibcf_l
 
-dim(edx_recom_matrix_z_little)
+#__SVD ####
+svd_model <- Recommender(train, "SVD")
+pred_svd <- predict(pred_svd, known, type = "ratings")
 
-rowCounts(edx_recom_matrix_cent_little) %>% as("matrix") %>% min
-colCounts(edx_recom_matrix_cent_little) %>% as("matrix") %>% min
+#__ALS ####
+als_model <- Recommender(train, "ALS")
+pred_als <- predict(als_model, known, type = "ratings")
 
-edx_recom_matrix_cent_little <- 
-  edx_recom_matrix_cent_little[,colCounts(edx_recom_matrix_cent_little) >= 20]
+# Errors ######
 
-rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
-colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
+error <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown),
+               "ubcf" = calcPredictionAccuracy(pred_ubcf, unknown),
+               "ibcf" = calcPredictionAccuracy(pred_ibcf, unknown),
+               "svd" = calcPredictionAccuracy(pred_svd, unknown),
+               "als" = calcPredictionAccuracy(pred_als, unknown))
+error
 
 
 #__________________________________________________________________
