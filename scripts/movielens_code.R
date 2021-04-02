@@ -428,7 +428,6 @@ unknown_l <- eval_scheme_little %>% getData("unknown")
 #__Random ####
 random_model_l <- Recommender(train_l[1:450], "RANDOM")
 pred_ramdom_l <- predict(random_model_l, known_l, type = "ratings")
-
 error_random_l <- rbind("random" = calcPredictionAccuracy(pred_ramdom_l, unknown_l))
 error_random_l
 # RMSE      MSE      MAE
@@ -450,86 +449,32 @@ error_ubcf_l
 #__IBCF ####
 ibcf_model_l <- Recommender(train_l[1:450], "IBCF")
 pred_ibcf_l <- predict(ibcf_model_l, known_l, type = "ratings")
-error_ibcf_l <- rbind("ubcf" = calcPredictionAccuracy(error_ibcf_l, unknown_l))
+error_ibcf_l <- rbind("ubcf" = calcPredictionAccuracy(ibcf_model_l, unknown_l))
 error_ibcf_l
+# ERROR ver qué pasa
 
 #__SVD ####
-svd_model <- Recommender(train, "SVD")
-pred_svd <- predict(pred_svd, known, type = "ratings")
+svd_model_l <- Recommender(train_l[1:450], "SVD")
+pred_svd_l <- predict(svd_model_l, known_l, type = "ratings")
+error_svd_l <- rbind("random" = calcPredictionAccuracy(pred_svd_l, unknown_l))
+error_svd_l
+# RMSE      MSE       MAE
+# random 1.099063 1.207939 0.8716586
 
 #__ALS ####
-als_model <- Recommender(train, "ALS")
-pred_als <- predict(als_model, known, type = "ratings")
+als_mode_l <- Recommender(train_l, "ALS")
+pred_als_l <- predict(als_mode_l, known_l, type = "ratings")
+error_als_l <- rbind("random" = calcPredictionAccuracy(pred_als_l, unknown_l))
+error_als_l
+
+#__HYBRID ######
+hybrid_model_l <- Recommender(train_l[1:450], "HYBRID")
+pred_hybrid_l <- predict(hybrid_model_l, known_l, type = "ratings")
+error_hybrid_l <- rbind("ubcf" = calcPredictionAccuracy(hybrid_model_l, unknown_l))
+error_hybrid_l
 
 # Errors ######
 
-error <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown),
-               "ubcf" = calcPredictionAccuracy(pred_ubcf, unknown),
-               "ibcf" = calcPredictionAccuracy(pred_ibcf, unknown),
-               "svd" = calcPredictionAccuracy(pred_svd, unknown),
-               "als" = calcPredictionAccuracy(pred_als, unknown))
-error
-
-
-#__________________________________________________________________
-#__________________________________________________________________
-
-# ___________________________________########
-# EVALUATION SCHEME ######
-# ___________________________________########
-
-# See detais with ?evaluationScheme for further tunning
-
-# You will waite for a while... Be patient! It takes long time.
-
-eval_scheme <- evaluationScheme(edx_recom_matrix_cent, method = "split", train = 0.9, given = 5)
-
-# ___________________________________########
-# I TEST: CENTER ######
-# ___________________________________########
-
-train <- eval_scheme %>% getData("train")
-known <- eval_scheme %>% getData("known")
-unknown <- eval_scheme %>% getData("unknown")
-
-# Applying Models #####
-
-#__Random ####
-random_model <- Recommender(train, "RANDOM")
-pred_ramdom <- predict(random_model, known, type = "ratings")
-
-error_random <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
-error_random
-# RMSE      MSE      MAE
-# random 1.450548 2.104089 1.117895
-
-#__UBCF ####
-ubcf_model <- Recommender(train, "UBCF")
-pred_ubcf <- predict(ubcf_model, known, type = "ratings")
-
-#__IBCF ####
-ibcf_model <- Recommender(train, "IBCF")
-pred_ibcf <- predict(ibcf_model, known, type = "ratings")
-
-#__SVD ####
-svd_model <- Recommender(train, "SVD")
-pred_svd <- predict(pred_svd, known, type = "ratings")
-
-#__ALS ####
-als_model <- Recommender(train, "ALS")
-pred_als <- predict(als_model, known, type = "ratings")
-
-# Errors ######
-
-error <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown),
-               "ubcf" = calcPredictionAccuracy(pred_ubcf, unknown),
-               "ibcf" = calcPredictionAccuracy(pred_ibcf, unknown),
-               "svd" = calcPredictionAccuracy(pred_svd, unknown),
-               "als" = calcPredictionAccuracy(pred_als, unknown))
-error
-
-
-
-
-
+errors_l <- data.frame(c("hola", "adios"), c(1,2))
+errors_l
 
