@@ -472,27 +472,6 @@ error_svd_l
 # random 1.099063 1.207939 0.8716586
 
 #__ALS ####
-<<<<<<< HEAD
-als_model <- Recommender(train, "ALS")
-pred_als <- predict(als_model, known, type = "ratings")
-
-#__HYBRID ####
-hybrid_model <- Recommender(train, "HYBRID")
-pred_hybrid <- predict(hybrid_model, known, type = "ratings")
-
-# Errors ######
-
-error <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown),
-               "ubcf" = calcPredictionAccuracy(pred_ubcf, unknown),
-               "ibcf" = calcPredictionAccuracy(pred_ibcf, unknown),
-               "svd" = calcPredictionAccuracy(pred_svd, unknown),
-               "als" = calcPredictionAccuracy(pred_als, unknown),
-               "hybrid" = calcPredictionAccuracy(pred_hybrid, unknown))
-error
-
-
-
-=======
 als_mode_l <- Recommender(train_l, "ALS")
 pred_als_l <- predict(als_mode_l, known_l, type = "ratings")
 error_als_l <- rbind("random" = calcPredictionAccuracy(pred_als_l, unknown_l))
@@ -506,5 +485,3 @@ pred_hybrid_l <- predict(hybrid_model_l, known_l, type = "ratings")
 error_hybrid_l <- rbind("ubcf" = calcPredictionAccuracy(hybrid_model_l, unknown_l))
 error_hybrid_l
 # ERROR ver que pasa
-
->>>>>>> 1fb3d0df91335c95804944429ec23cf2ff5d0e07
