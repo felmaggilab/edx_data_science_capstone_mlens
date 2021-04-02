@@ -416,85 +416,63 @@ colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
 #__________________________________________________________________
 
 # ___________________________________########
-# # CREATING A Little Matrix for Code Testing ########
-# ___________________________________########
-
-# NOTA: Filtrar menos de 10 pelis rateadas por usuario
-
-set.seed(1970, sample.kind="Rounding")
-edx_recom_df_little <- edx_recom_df[sample(1:nrow(edx_recom_df), size=100000),]
-
-head(edx_recom_df_little)
-
-edx_recom_matrix_litte <- edx_recom_df_little %>% 
-  as("realRatingMatrix") #__as("realRatingMatrix") ####
-
-dim(edx_recom_matrix_litte)
-
-str(edx_recom_matrix_litte)
-
-edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
-
-image(edx_recom_matrix_litte[1:30, 1:30] %>% getRatingMatrix)
-
-edx_recom_matrix_litte %>%  getRatings %>% hist(main = "Ratings")
-
-edx_recom_matrix_cent_little <- edx_recom_matrix_litte %>% #__Method = Center #####
-normalize
-
-edx_recom_matrix_cent_little %>% getRatings %>% 
-  hist(main = "Ratings normalized: center") 
-
-edx_recom_matrix_z_little <- edx_recom_matrix_litte %>% 
-  normalize(method="Z-score") #__Method = Z-score #####
-
-dim(edx_recom_matrix_z_little)
-
-#__________________________________________________________________
-#__________________________________________________________________
-
-# ___________________________________########
-# EVALUATION SCHEME ######
+# EVALUATION SCHEME LITTLE ######
 # ___________________________________########
 
 # See detais with ?evaluationScheme for further tunning
 
 # You will waite for a while... Be patient! It takes long time.
 
-eval_scheme <- evaluationScheme(edx_recom_matrix_cent, method = "split", train = 0.9, given = 5)
+eval_scheme_little <- evaluationScheme(edx_recom_matrix_cent[1:600], method = "split", train = 0.9, given = 5)
 
 # ___________________________________########
-# I TEST: CENTER ######
+# I TEST: CENTER LITTLE ######
 # ___________________________________########
 
-train <- eval_scheme %>% getData("train")
-known <- eval_scheme %>% getData("known")
-unknown <- eval_scheme %>% getData("unknown")
+train_l <- eval_scheme_little %>% getData("train")
+known_l <- eval_scheme_little %>% getData("known")
+unknown_l <- eval_scheme_little %>% getData("unknown")
 
 # Applying Models #####
 
 #__Random ####
-random_model <- Recommender(train, "RANDOM")
-pred_ramdom <- predict(random_model, known, type = "ratings")
+random_model_l <- Recommender(train_l[1:450], "RANDOM")
+pred_ramdom_l <- predict(random_model_l, known_l, type = "ratings")
+error_random_l <- rbind("random" = calcPredictionAccuracy(pred_ramdom_l, unknown_l))
+error_random_l
+# RMSE      MSE      MAE
+# random 1.424282 2.028579 1.103045
 
-error_random <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown))
-error_random
+# COMPARING RESULTS with edx entire Matrix
 # RMSE      MSE      MAE
 # random 1.450548 2.104089 1.117895
 
 #__UBCF ####
-ubcf_model <- Recommender(train, "UBCF")
-pred_ubcf <- predict(ubcf_model, known, type = "ratings")
+ubcf_model_l <- Recommender(train_l[1:450], "UBCF")
+pred_ubcf_l <- predict(ubcf_model_l, known_l, type = "ratings")
+error_ubcf_l <- rbind("ubcf" = calcPredictionAccuracy(pred_ubcf_l, unknown_l))
+error_ubcf_l
+# RMSE      MSE       MAE
+# ubcf 1.085612 1.178554 0.8489743
+
 
 #__IBCF ####
-ibcf_model <- Recommender(train, "IBCF")
-pred_ibcf <- predict(ibcf_model, known, type = "ratings")
+ibcf_model_l <- Recommender(train_l[1:450], "IBCF")
+pred_ibcf_l <- predict(ibcf_model_l, known_l, type = "ratings")
+error_ibcf_l <- rbind("ubcf" = calcPredictionAccuracy(ibcf_model_l, unknown_l))
+error_ibcf_l
+# ERROR ver qué pasa
 
 #__SVD ####
-svd_model <- Recommender(train, "SVD")
-pred_svd <- predict(pred_svd, known, type = "ratings")
+svd_model_l <- Recommender(train_l[1:450], "SVD")
+pred_svd_l <- predict(svd_model_l, known_l, type = "ratings")
+error_svd_l <- rbind("random" = calcPredictionAccuracy(pred_svd_l, unknown_l))
+error_svd_l
+# RMSE      MSE       MAE
+# random 1.099063 1.207939 0.8716586
 
 #__ALS ####
+<<<<<<< HEAD
 als_model <- Recommender(train, "ALS")
 pred_als <- predict(als_model, known, type = "ratings")
 
@@ -514,3 +492,21 @@ error
 
 
 
+=======
+als_mode_l <- Recommender(train_l, "ALS")
+pred_als_l <- predict(als_mode_l, known_l, type = "ratings")
+error_als_l <- rbind("random" = calcPredictionAccuracy(pred_als_l, unknown_l))
+error_als_l
+
+#__HYBRID ######
+hybrid_model_l <- Recommender(train_l[1:450], "HYBRID")
+pred_hybrid_l <- predict(hybrid_model_l, known_l, type = "ratings")
+error_hybrid_l <- rbind("ubcf" = calcPredictionAccuracy(hybrid_model_l, unknown_l))
+error_hybrid_l
+
+# Errors ######
+
+errors_l <- data.frame(c("hola", "adios"), c(1,2))
+errors_l
+
+>>>>>>> 1fb3d0df91335c95804944429ec23cf2ff5d0e07
