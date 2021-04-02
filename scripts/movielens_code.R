@@ -96,11 +96,14 @@ validation <- temp %>%
   semi_join(edx, by = "movieId") %>%
   semi_join(edx, by = "userId")
 
+str(validation$rating)
+
 # Add rows removed from validation set back into edx set
 removed <- anti_join(temp, validation)
 edx <- rbind(edx, removed)
 
 head(edx)
+class(edx)
 
 # ___________________________________########
 # ADDING NEW COLUMNS#######
@@ -201,7 +204,7 @@ mu
 head(edx)
 
 set.seed(1970, sample.kind="Rounding")
-test_index <- createDataPartition(y = edx$rating, times = 1, p = 0.2,
+test_index <- createDataPartition(y = edx$rating, times = 1, p = 0.1,
                                   list = FALSE)
 train_edx <- edx[-test_index,]
 test_edx <- edx[test_index,]
@@ -234,15 +237,17 @@ RMSE <- function(true_ratings, pred_ratings) {
 # We will start testing very basic models (included on bibliography of the 
 # course, just for basic testing process)
 
-# _______No reg_________ #####
+# _______No regularization_________ #####
 
 # Naive ######
 
 naive_pred <- mean(train_edx$rating)
 
-naive_rmse <- RMSE(naive_pred, train_edx$rating)
+str(naive_pred)
+
+naive_rmse <- RMSE(naive_pred, test_edx$rating)
 naive_rmse
-#__1.061114 = 0 points #####
+#__1.060167 = 0 points #####
 
 # Movie Effects ######
 
@@ -261,39 +266,18 @@ b_i <- test_edx %>%
 
 movie_effect_pred <- mu + b_i
 
+str(movie_effect_pred)
+
 movie_effect_rmse <- RMSE(test_edx$rating, movie_effect_pred)
 movie_effect_rmse
-# __0.9441728 = 0 points #####
+# __0.9432171 = 0 points #####
 
-# User Effects ######
 
-train_edx %>% 
-  group_by(userId) %>% 
-  summarise(b_u = mean(rating)) %>% 
-  filter(n() >=100) %>% 
-  ggplot(aes(b_u)) +
-  geom_histogram(bins = 100, color = "black")
-
-user_avgs <- train_edx %>% 
-  left_join(movie_avgs, by='movieId') %>% 
-  group_by(userId) %>% 
-  summarise(b_u = mean(rating - mu - b_i))
-
-movie_user_effect_pred <- test_edx %>% 
-  left_join(movie_avgs, by = 'movieId') %>% 
-  left_join(user_avgs, by = 'userId') %>% 
-  mutate(pred = mu + b_i + b_u) %>% 
-  pull(pred)
-
-movie_user_effect_rmse <- RMSE(movie_user_effect_pred, test_edx$rating)
-movie_user_effect_rmse
-# __0.8665832 = 10 points #####
-
-# _______Reg_________######
+# _______Regularization_________######
 
 lambdas <- seq(0, 10, 0.25)
 
-# lambda best-tune to Move Effects and User Efects Regularization #####
+# Lambda best-tune to Move Effects and User Efects Regularization #####
 
 rmses <- sapply(lambdas, function(l){
   
@@ -323,15 +307,71 @@ qplot(lambdas, rmses)
 lambda <- lambdas[which.min(rmses)]
 lambda
 
-reg_movie_user_effect_rmse <- min(rmses)
+min(rmses)
 
-# Regularized movie + user effects #####
+# Predictions with best tune lambda #######
 
+mu <- mean(train_edx$rating)
+
+b_i <- train_edx %>%
+  group_by(movieId) %>%
+  summarize(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- train_edx %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+reg_movie_user_effect_pred <- 
+  test_edx %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  mutate(pred = mu + b_i + b_u) %>%
+  .$pred
+
+str(reg_movie_user_effect_pred)
+
+# Regularized Movie + User Effects #####
+
+reg_movie_user_effect_rmse <- RMSE(reg_movie_user_effect_pred, test_edx$rating)
 reg_movie_user_effect_rmse
-# __0.8658724 = 10 points#####
+# 0.864565 = 20 points (prov)
+
+# Provisional table: 
 
 data.frame(naive_rmse, movie_effect_rmse, movie_user_effect_rmse, 
            reg_movie_user_effect_rmse) %>% knitr::kable()
+
+# Test Validation #######
+
+test_val <- 
+  validation %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  mutate(mu = mu, pred = mu + b_i + b_u)
+
+# 4 Films have b_i = NA, thus pred = NA
+# If there are NAs, RMSE function doens't work, and return NA
+test_val %>%  filter(is.na(pred))
+
+# To solve the problem, we will replace the 4 NAs with "mu"
+# (the avg rating of all movies)
+test_val$pred[is.na(test_val$pred)] <- mu
+
+# Then we have remove all 4 NAs with mu
+test_val %>%  filter(is.na(pred))
+test_val %>%  filter(is.na(b_i))
+
+# We can now extract predictions...
+test_val <-   test_val %>% .$pred
+
+# ...and calculate RMSE over validation test
+test <- RMSE(test_val, validation$rating)
+test 
+# 0.8652589 = 15 points ######
+
+
+
 
 # ___________________________________########
 # RECOMMENDER LAB ######
@@ -443,6 +483,14 @@ error_random_l
 # RMSE      MSE      MAE
 # random 1.424282 2.028579 1.103045
 
+pred_ramdom_l %>% as("data.frame") %>% head
+str(pred_ramdom_l)
+
+test <- pred_ramdom_l %>% as("data.frame")
+class(test)
+
+unique(test$user)
+
 # COMPARING RESULTS with edx entire Matrix
 # RMSE      MSE      MAE
 # random 1.450548 2.104089 1.117895
@@ -464,6 +512,8 @@ pred_ibcf_l <- predict(ibcf_model_l, known_l, type = "ratings")
 error_ibcf_l <- rbind("ubcf" = calcPredictionAccuracy(ibcf_model_l, unknown_l))
 error_ibcf_l
 
+dim(pred_ibcf_l)
+
 # Error in (function (classes, fdef, mtable):
 # unable to find an inherited method for function ‘calcPredictionAccuracy’ for 
 # signature ‘"Recommender", "realRatingMatrix"                                                                                                                                      unable to find an inherited method for function ‘calcPredictionAccuracy’ for signature ‘"Recommender", "realRatingMatrix"’
@@ -475,6 +525,13 @@ error_svd_l <- rbind("svd" = calcPredictionAccuracy(pred_svd_l, unknown_l))
 error_svd_l
 # RMSE      MSE       MAE
 # svd 1.108122 1.227935 0.8825007
+
+
+test <- pred_svd_l %>% as("data.frame")
+head(test)
+
+edx_recom_df %>%  filter(user == 10 & item == 294)
+
 
 #__ALS ####
 als_mode_l <- Recommender(train_l, "ALS")
