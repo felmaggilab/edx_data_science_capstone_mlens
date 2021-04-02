@@ -342,8 +342,18 @@ data.frame(naive_rmse, movie_effect_rmse, movie_user_effect_rmse,
 # including those that are barely explained in the course (SDV, for example)
 
 # Sources ######
-# https://rpubs.com/elias_alegria/intro_recommenderlab
 # https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf
+# https://cran.r-project.org/web/packages/recommenderlab/recommenderlab.pdf
+# https://rpubs.com/elias_alegria/intro_recommenderlab
+# https://rpubs.com/umasrinivas/683551
+# http://rstudio-pubs-static.s3.amazonaws.com/287685_258f4041cee643f9aaf7b2b654a82162.html
+# https://rstudio-pubs-static.s3.amazonaws.com/400285_89f33b0f92f5474ea16e745eeaa5681a.html
+# http://www.stats.ox.ac.uk/~sejdinov/teaching/atsml19/UBCF_IBCF.html
+# https://rpubs.com/vamshigvk/whatsthenextmovie
+# https://www.statworx.com/ch/blog/movie-recommendation-with-recommenderlab/
+# https://rpubs.com/Xkong100/505398
+# https://www.r-bloggers.com/2014/12/recommender-systems-101-a-step-by-step-practical-example-in-r/
+
 
 # Features seleccion: userId, movieID, rating ####
 
@@ -488,17 +498,19 @@ pred_svd <- predict(pred_svd, known, type = "ratings")
 als_model <- Recommender(train, "ALS")
 pred_als <- predict(als_model, known, type = "ratings")
 
+#__HYBRID ####
+hybrid_model <- Recommender(train, "HYBRID")
+pred_hybrid <- predict(hybrid_model, known, type = "ratings")
+
 # Errors ######
 
 error <- rbind("random" = calcPredictionAccuracy(pred_ramdom, unknown),
                "ubcf" = calcPredictionAccuracy(pred_ubcf, unknown),
                "ibcf" = calcPredictionAccuracy(pred_ibcf, unknown),
                "svd" = calcPredictionAccuracy(pred_svd, unknown),
-               "als" = calcPredictionAccuracy(pred_als, unknown))
+               "als" = calcPredictionAccuracy(pred_als, unknown),
+               "hybrid" = calcPredictionAccuracy(pred_hybrid, unknown))
 error
-
-
-
 
 
 
