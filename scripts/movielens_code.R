@@ -447,41 +447,49 @@ error_random_l
 # RMSE      MSE      MAE
 # random 1.450548 2.104089 1.117895
 
-#__UBCF ####
+#__UBCF ERROR ####
 ubcf_model_l <- Recommender(train_l[1:450], "UBCF")
 pred_ubcf_l <- predict(ubcf_model_l, known_l, type = "ratings")
+
+# Error in h(simpleError(msg, call)) : 
+# error in evaluating the argument 'x' in selecting a method for function 't':
+# not-yet-implemented method for <dgCMatrix> %*% <list>
+
 error_ubcf_l <- rbind("ubcf" = calcPredictionAccuracy(pred_ubcf_l, unknown_l))
 error_ubcf_l
-# RMSE      MSE       MAE
-# ubcf 1.085612 1.178554 0.8489743
 
-
-#__IBCF ####
+#__IBCF ERROR ####
 ibcf_model_l <- Recommender(train_l[1:450], "IBCF")
 pred_ibcf_l <- predict(ibcf_model_l, known_l, type = "ratings")
 error_ibcf_l <- rbind("ubcf" = calcPredictionAccuracy(ibcf_model_l, unknown_l))
 error_ibcf_l
-# ERROR ver qué pasa
+
+# Error in (function (classes, fdef, mtable):
+# unable to find an inherited method for function ‘calcPredictionAccuracy’ for 
+# signature ‘"Recommender", "realRatingMatrix"                                                                                                                                      unable to find an inherited method for function ‘calcPredictionAccuracy’ for signature ‘"Recommender", "realRatingMatrix"’
 
 #__SVD ####
 svd_model_l <- Recommender(train_l[1:450], "SVD")
 pred_svd_l <- predict(svd_model_l, known_l, type = "ratings")
-error_svd_l <- rbind("random" = calcPredictionAccuracy(pred_svd_l, unknown_l))
+error_svd_l <- rbind("svd" = calcPredictionAccuracy(pred_svd_l, unknown_l))
 error_svd_l
 # RMSE      MSE       MAE
-# random 1.099063 1.207939 0.8716586
+# svd 1.108122 1.227935 0.8825007
 
 #__ALS ####
 als_mode_l <- Recommender(train_l, "ALS")
 pred_als_l <- predict(als_mode_l, known_l, type = "ratings")
-error_als_l <- rbind("random" = calcPredictionAccuracy(pred_als_l, unknown_l))
+error_als_l <- rbind("als" = calcPredictionAccuracy(pred_als_l, unknown_l))
 error_als_l
 # RMSE      MSE       MAE
-# random 1.058391 1.120191 0.8304757
+# als 1.006225 1.012488 0.7879996
 
-#__HYBRID ######
+#__HYBRID ERROR ######
 hybrid_model_l <- Recommender(train_l[1:450], "HYBRID")
+
+# Error in (function (..., weights = NULL)  : 
+# No base recommender specified!
+
 pred_hybrid_l <- predict(hybrid_model_l, known_l, type = "ratings")
-error_hybrid_l <- rbind("ubcf" = calcPredictionAccuracy(hybrid_model_l, unknown_l))
+error_hybrid_l <- rbind("hybrid" = calcPredictionAccuracy(hybrid_model_l, unknown_l))
 error_hybrid_l
-# ERROR ver que pasa
