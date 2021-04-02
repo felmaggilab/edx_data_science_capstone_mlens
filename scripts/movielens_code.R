@@ -466,15 +466,13 @@ als_mode_l <- Recommender(train_l, "ALS")
 pred_als_l <- predict(als_mode_l, known_l, type = "ratings")
 error_als_l <- rbind("random" = calcPredictionAccuracy(pred_als_l, unknown_l))
 error_als_l
+# RMSE      MSE       MAE
+# random 1.058391 1.120191 0.8304757
 
 #__HYBRID ######
 hybrid_model_l <- Recommender(train_l[1:450], "HYBRID")
 pred_hybrid_l <- predict(hybrid_model_l, known_l, type = "ratings")
 error_hybrid_l <- rbind("ubcf" = calcPredictionAccuracy(hybrid_model_l, unknown_l))
 error_hybrid_l
-
-# Errors ######
-
-errors_l <- data.frame(c("hola", "adios"), c(1,2))
-errors_l
+# ERROR ver que pasa
 
