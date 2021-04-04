@@ -161,38 +161,36 @@ edx_little
 
 # Applying changes to entire data set
 # ______________________________________
-# We want to preserve the original "edx" object, so we will create a new
-# object called "edx_2"
+
 
 # Adding rating_date and rating_year ######
-edx_2 <- edx %>% mutate(rating_date = as_datetime(timestamp), 
+edx <- edx %>% mutate(rating_date = as_datetime(timestamp), 
                         rating_year = as.integer(year(rating_date)))
 
 # Creating the new column "movie_year", extracting year from "title" #####
-edx_2 <- edx_2 %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
+edx <- edx %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
 
 # Removing (parenthesis)  from "movie_year" column ####
-movie_years_temp <- edx_2 %>% pull(movie_year)
+movie_years_temp <- edx %>% pull(movie_year)
 movie_years_temp <- str_remove_all(movie_years_temp, "\\(")
 movie_years_temp <- str_remove(movie_years_temp, "\\)")
 
 # Adding the cleaned "movie_years_temp" to data set #####
-edx_2 <- edx_2 %>% 
+edx <- edx %>% 
   mutate(movie_year = as.integer(movie_years_temp))
 
 # Review of final results
-edx_2[ind]
-
+edx[ind]
 
 # ___________________________________########
 # EXPLORATORY DATA ANALYSIS #######
 # ___________________________________########
 
 # Ratings frecuency 
-edx_2 %>% ggplot(aes(rating)) +
+edx %>% ggplot(aes(rating)) +
   geom_density()
 
-mu <- mean(edx_2$rating)
+mu <- mean(edx$rating)
 mu
 
 # ___________________________________########
@@ -252,6 +250,7 @@ naive_rmse
 # Movie Effects ######
 
 mu <- mean(train_edx$rating)
+
 movie_avgs <- train_edx %>% 
   group_by(movieId) %>% 
   summarise(b_i = mean(rating-mu))
@@ -335,42 +334,102 @@ str(reg_movie_user_effect_pred)
 
 reg_movie_user_effect_rmse <- RMSE(reg_movie_user_effect_pred, test_edx$rating)
 reg_movie_user_effect_rmse
-# 0.864565 = 20 points (prov)
+# __0.864565 = 20 points (prov) #####
 
 # Provisional table: 
 
 data.frame(naive_rmse, movie_effect_rmse, movie_user_effect_rmse, 
            reg_movie_user_effect_rmse) %>% knitr::kable()
 
-# Test Validation #######
+# Test Validation 1: must be removed from code #######
+# Regularized movie + user effects
 
-test_val <- 
+test_val_1 <- 
   validation %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
   mutate(mu = mu, pred = mu + b_i + b_u)
 
+head(test_val_1)
+
 # 4 Films have b_i = NA, thus pred = NA
 # If there are NAs, RMSE function doens't work, and return NA
-test_val %>%  filter(is.na(pred))
+test_val_1 %>%  filter(is.na(pred))
 
 # To solve the problem, we will replace the 4 NAs with "mu"
 # (the avg rating of all movies)
-test_val$pred[is.na(test_val$pred)] <- mu
+test_val_1$pred[is.na(test_val$pred)] <- mu
 
 # Then we have remove all 4 NAs with mu
-test_val %>%  filter(is.na(pred))
-test_val %>%  filter(is.na(b_i))
+test_val_1 %>%  filter(is.na(pred))
+test_val_1 %>%  filter(is.na(b_i))
 
 # We can now extract predictions...
-test_val <-   test_val %>% .$pred
+test_val_1_pred <-   test_val %>% .$pred
 
 # ...and calculate RMSE over validation test
-test <- RMSE(test_val, validation$rating)
-test 
-# 0.8652589 = 15 points ######
+test_1 <- RMSE(test_val_pred, validation$rating)
+test_1 
+# __0.8652589 = 15 points ######
+
+# ___________________________________########
+##### ADDING GENDER EFFECT ######
+# ___________________________________########
+
+edx <- edx %>% 
+  mutate(genres = as.factor(genres))
+
+# Gender Effects ######
 
 
+mu <- mean(train_edx$rating)
+
+b_i <- train_edx %>%
+  group_by(movieId) %>%
+  summarize(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- train_edx %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+reg_movie_user_effect_pred <- 
+  test_edx %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  mutate(pred = mu + b_i + b_u) %>%
+  .$pred
+
+str(reg_movie_user_effect_pred)
+
+head(train_edx)
+
+train_edx <- train_edx %>% 
+  mutate(genres = as.factor(genres))
+
+class(train_edx$genres)
+
+test_edx <- test_edx %>% 
+  mutate(genres = as.factor(genres))
+
+class(test_edx$genres)
+
+g_i <- train_edx %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  group_by(genres) %>% 
+  summarise(g_i = mean(rating) - b_u - b_i - mu)
+
+movie_user_effect_gender_pred <- 
+  test_edx %>%
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(g_i, by = "genres") %>% 
+  mutate(pred = mu + b_i + b_u + g_i) %>% 
+  .$pred
+
+head(test_edx)
+  
 
 
 # ___________________________________########
