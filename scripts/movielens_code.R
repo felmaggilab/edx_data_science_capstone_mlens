@@ -162,7 +162,6 @@ edx_little
 # Applying changes to entire data set
 # ______________________________________
 
-
 # Adding rating_date and rating_year ######
 edx <- edx %>% mutate(rating_date = as_datetime(timestamp), 
                         rating_year = as.integer(year(rating_date)))
@@ -182,6 +181,7 @@ edx <- edx %>%
 # Review of final results
 edx[ind]
 
+rm(movie_years_temp)
 # ___________________________________########
 # EXPLORATORY DATA ANALYSIS #######
 # ___________________________________########
@@ -192,6 +192,24 @@ edx %>% ggplot(aes(rating)) +
 
 mu <- mean(edx$rating)
 mu
+
+# Visualization of ratings vs movie_year
+
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(movie_year_avgs = mean(rating)) %>% 
+  ggplot(aes(movie_year, movie_year_avgs)) +
+  geom_point() +
+  geom_smooth()
+
+# Visualization of ratings vs rating_year
+
+edx %>% 
+  group_by(rating_year) %>% 
+  summarise(rating_year_avgs = mean(rating)) %>% 
+  ggplot(aes(rating_year, rating_year_avgs)) +
+  geom_point() +
+  geom_smooth()
 
 # ___________________________________########
 #### TEST SET AND TRAIN SET ########
@@ -237,7 +255,7 @@ RMSE <- function(true_ratings, pred_ratings) {
 
 # _______No regularization_________ #####
 
-# Naive ######
+# Naive: mu ######
 
 naive_pred <- mean(train_edx$rating)
 
@@ -247,13 +265,15 @@ naive_rmse <- RMSE(naive_pred, test_edx$rating)
 naive_rmse
 #__1.060167 = 0 points #####
 
-# Movie Effects ######
+# Movie Effects: b_i ######
 
 mu <- mean(train_edx$rating)
 
 movie_avgs <- train_edx %>% 
   group_by(movieId) %>% 
   summarise(b_i = mean(rating-mu))
+
+head(movie_avgs)
 
 movie_avgs %>% 
   ggplot(aes(b_i)) +
@@ -270,6 +290,23 @@ str(movie_effect_pred)
 movie_effect_rmse <- RMSE(test_edx$rating, movie_effect_pred)
 movie_effect_rmse
 # __0.9432171 = 0 points #####
+
+# Movie User Effects: b_i + b_u #######
+
+user_avgs <- train_edx %>% 
+  left_join(movie_avgs, by = "movieId") %>% 
+  group_by(userId) %>% 
+  summarise(b_u = mean(rating - mu - b_i))
+
+movie_user_effect_pred <- test_edx %>% 
+  left_join(movie_avgs, by = 'movieId') %>% 
+  left_join(user_avgs, by = 'userId') %>%  
+  mutate(pred = mu + b_i + b_u) %>% 
+  pull(pred)
+
+movie_user_effect_rmse <- RMSE(test_edx$rating, movie_user_effect_pred)
+movie_user_effect_rmse
+# __0.8651897 = 15 points #####
 
 
 # _______Regularization_________######
@@ -316,6 +353,8 @@ b_i <- train_edx %>%
   group_by(movieId) %>%
   summarize(b_i = sum(rating - mu)/(n()+lambda))
 
+head(b_i)
+
 b_u <- train_edx %>% 
   left_join(b_i, by="movieId") %>%
   group_by(userId) %>%
@@ -336,12 +375,7 @@ reg_movie_user_effect_rmse <- RMSE(reg_movie_user_effect_pred, test_edx$rating)
 reg_movie_user_effect_rmse
 # __0.864565 = 20 points (prov) #####
 
-# Provisional table: 
-
-data.frame(naive_rmse, movie_effect_rmse, movie_user_effect_rmse, 
-           reg_movie_user_effect_rmse) %>% knitr::kable()
-
-# Test Validation 1: must be removed from code #######
+# Test Validation 1: MUST BE REMOVED #######
 # Regularized movie + user effects
 
 test_val_1 <- 
@@ -358,29 +392,107 @@ test_val_1 %>%  filter(is.na(pred))
 
 # To solve the problem, we will replace the 4 NAs with "mu"
 # (the avg rating of all movies)
-test_val_1$pred[is.na(test_val$pred)] <- mu
+test_val_1$pred[is.na(test_val_1$pred)] <- mu
 
 # Then we have remove all 4 NAs with mu
 test_val_1 %>%  filter(is.na(pred))
 test_val_1 %>%  filter(is.na(b_i))
 
 # We can now extract predictions...
-test_val_1_pred <-   test_val %>% .$pred
+test_val_1_pred <-   test_val_1 %>% .$pred
 
 # ...and calculate RMSE over validation test
-test_1 <- RMSE(test_val_pred, validation$rating)
+test_1 <- RMSE(test_val_1_pred, validation$rating)
 test_1 
 # __0.8652589 = 15 points ######
 
+
 # ___________________________________########
-##### ADDING GENDER EFFECT ######
+##### ADDING TIME MOVIE YEAR EFFECT: b_my ######
 # ___________________________________########
 
-edx <- edx %>% 
-  mutate(genres = as.factor(genres))
+head(edx)
 
-# Gender Effects ######
+# Visualization of ratings vs years
 
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(movie_year_avgs = mean(rating)) %>% 
+  ggplot(aes(movie_year, movie_year_avgs)) +
+  geom_point() +
+  geom_smooth()
+
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(ratings = n()) %>% 
+  arrange(ratings)
+
+# Adding column b_my #########
+
+movie_year_avgs <- train_edx %>% 
+  left_join(movie_avgs, by = 'movieId') %>% 
+  left_join(user_avgs, by = 'userId') %>% 
+  group_by(movie_year) %>% 
+  summarise(b_my = mean(rating - mu - b_i - b_u))
+
+head(movie_year_avgs)
+
+movie_user_effect_myear_pred <- test_edx %>% 
+  left_join(movie_avgs, by = 'movieId') %>% 
+  left_join(user_avgs, by = 'userId') %>%  
+  left_join(movie_year_avgs, by = 'movie_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my) %>% 
+  pull(pred)
+
+movie_user_effect_myear_rmse <- RMSE(movie_user_effect_myear_pred, test_edx$rating)
+movie_user_effect_myear_rmse
+#__ 0.8648795 : 15 points (prov) ######## 
+
+
+# Regularization #########
+
+lambdas <- seq(0, 10, 0.25)
+
+# Lambda best-tune to Movie +  User + Year Effects Regularization #####
+
+rmses <- sapply(lambdas, function(l){
+  
+  mu <- mean(train_edx$rating)
+  
+  b_i <- train_edx %>%
+    group_by(movieId) %>%
+    summarize(b_i = sum(rating - mu)/(n()+l))
+  
+  b_u <- train_edx %>% 
+    left_join(b_i, by="movieId") %>%
+    group_by(userId) %>%
+    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+  
+  b_my <- train_edx %>% 
+    left_join(b_i, by = 'movieId') %>% 
+    left_join(b_u, by = 'userId') %>% 
+    group_by(movie_year) %>% 
+    summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+l))
+  
+  predicted_ratings <- 
+    test_edx %>% 
+    left_join(b_i, by = "movieId") %>%
+    left_join(b_u, by = "userId") %>%
+    left_join(b_my, by = 'movie_year') %>% 
+    mutate(pred = mu + b_i + b_u + b_my) %>%
+    .$pred
+  
+  return(RMSE(predicted_ratings, test_edx$rating))
+})
+
+qplot(lambdas, rmses)  
+
+lambda <- lambdas[which.min(rmses)]
+lambda
+
+min(rmses)
+
+# Predictions with best tune lambda #######
 
 mu <- mean(train_edx$rating)
 
@@ -393,16 +505,292 @@ b_u <- train_edx %>%
   group_by(userId) %>%
   summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
 
-reg_movie_user_effect_pred <- 
+b_my <- train_edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  group_by(movie_year) %>% 
+  summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
+
+reg_movie_user_myear_effect_pred <- 
   test_edx %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
-  mutate(pred = mu + b_i + b_u) %>%
+  left_join(b_my, by = 'movie_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my) %>%
   .$pred
 
-str(reg_movie_user_effect_pred)
+str(reg_movie_user_myear_effect_pred)
 
-head(train_edx)
+# Regularized Movie + User + Movie_Year #####
+
+reg_movie_user_effect_myear_rmse <- RMSE(reg_movie_user_myear_effect_pred, 
+                                         test_edx$rating)
+reg_movie_user_effect_myear_rmse
+#__0.8643021 = 25 Points (prov)
+
+
+# Test Validation 2: must be removed from code still end #######
+# Regularized movie + user effects + year effects
+
+# Adding new columns to validation set
+# ______________________________________
+
+# Adding rating_date and rating_year ######
+validation_2 <- validation %>% mutate(rating_date = as_datetime(timestamp), 
+                      rating_year = as.integer(year(rating_date)))
+
+# Creating the new column "movie_year", extracting year from "title" #####
+validation_2 <- validation_2 %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
+
+# Removing (parenthesis)  from "movie_year" column ####
+movie_years_temp <- validation_2 %>% pull(movie_year)
+movie_years_temp <- str_remove_all(movie_years_temp, "\\(")
+movie_years_temp <- str_remove(movie_years_temp, "\\)")
+
+# Adding the cleaned "movie_years_temp" to data set #####
+validation_2 <- validation_2 %>% 
+  mutate(movie_year = as.integer(movie_years_temp))
+
+# Review of final results
+validation_2[ind]
+
+rm(movie_years_temp)
+
+test_val_2 <- 
+  validation_2 %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>% 
+  mutate(mu = mu, pred = mu + b_i + b_u + b_my)
+
+head(test_val_2)
+
+# 4 Films have b_i = NA, thus pred = NA
+# If there are NAs, RMSE function doens't work, and return NA
+test_val_2 %>%  filter(is.na(pred))
+
+# To solve the problem, we will replace the 4 NAs with "mu"
+# (the avg rating of all movies)
+test_val_2$pred[is.na(test_val_2$pred)] <- mu
+
+# Then we have remove all 4 NAs with mu
+test_val_2 %>%  filter(is.na(pred))
+test_val_2 %>%  filter(is.na(b_i))
+
+# We can now extract predictions...
+test_val_2_pred <-   test_val_2 %>% .$pred
+
+# ...and calculate RMSE over validation test
+test_2 <- RMSE(test_val_2_pred, validation$rating)
+test_2 
+# _0.8649689 = 20 points ######
+
+
+# ___________________________________########
+##### ADDING RATING YEAR EFFECTS ######
+# ___________________________________########
+
+# Visualization of ratings vs rating_years
+
+edx %>% 
+  group_by(rating_year) %>% 
+  summarise(rating_year_avgs = mean(rating)) %>% 
+  ggplot(aes(rating_year, rating_year_avgs)) +
+  geom_point() +
+  geom_smooth()
+
+edx %>% 
+  group_by(rating_year) %>% 
+  summarise(ratings = n()) %>% 
+  arrange(ratings)
+
+# Adding column b_ry #########
+
+rating_year_avgs <- train_edx %>% 
+  left_join(movie_avgs, by = 'movieId') %>% 
+  left_join(user_avgs, by = 'userId') %>% 
+  left_join(movie_year_avgs, by = 'movie_year') %>%
+  group_by(rating_year) %>% 
+  summarise(b_ry = mean(rating - mu - b_i - b_u - b_my))
+
+head(rating_year_avgs)
+
+movie_user_effect_myear_ryear_pred <- test_edx %>% 
+  left_join(movie_avgs, by = 'movieId') %>% 
+  left_join(user_avgs, by = 'userId') %>%  
+  left_join(movie_year_avgs, by = 'movie_year') %>% 
+  left_join(rating_year_avgs, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>% 
+  pull(pred)
+
+movie_user_effect_myear_ryear_rmse <- RMSE(movie_user_effect_myear_ryear_pred, 
+                                           test_edx$rating)
+movie_user_effect_myear_ryear_rmse
+## __0.8647913 #######
+
+
+# Provisional table 4: 
+
+data.frame("mu" = naive_rmse, 
+           "bi" = movie_effect_rmse, 
+           "bi_bu" = movie_user_effect_rmse, 
+           "reg_bi_bu" = reg_movie_user_effect_rmse, 
+           "bi_bu_bmy" = movie_user_effect_myear_rmse,
+           "reg_bi_bu_bmy" = reg_movie_user_effect_myear_rmse, 
+           "bi_bu_bmy_bry" = movie_user_effect_myear_ryear_rmse) %>% 
+  knitr::kable()
+
+# Regularization #########
+
+lambdas <- seq(0, 10, 0.25)
+
+# Lambda best-tune to Movie +  User + Year Effects Regularization #####
+
+rmses <- sapply(lambdas, function(l){
+  
+  mu <- mean(train_edx$rating)
+  
+  b_i <- train_edx %>%
+    group_by(movieId) %>%
+    summarize(b_i = sum(rating - mu)/(n()+l))
+  
+  b_u <- train_edx %>% 
+    left_join(b_i, by="movieId") %>%
+    group_by(userId) %>%
+    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+  
+  b_my <- train_edx %>% 
+    left_join(b_i, by = 'movieId') %>% 
+    left_join(b_u, by = 'userId') %>% 
+    group_by(movie_year) %>% 
+    summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+l))
+  
+  b_ry <- train_edx %>% 
+    left_join(b_i, by = 'movieId') %>% 
+    left_join(b_u, by = 'userId') %>% 
+    left_join(b_my, by = 'movie_year') %>% 
+    group_by(rating_year) %>% 
+    summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+l))
+    
+ predicted_ratings <- 
+    test_edx %>% 
+    left_join(b_i, by = "movieId") %>%
+    left_join(b_u, by = "userId") %>%
+    left_join(b_my, by = 'movie_year') %>%
+    left_join(b_ry, by = 'rating_year') %>% 
+    mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
+    .$pred
+  
+  return(RMSE(predicted_ratings, test_edx$rating))
+})
+
+qplot(lambdas, rmses)  
+
+lambda <- lambdas[which.min(rmses)]
+lambda
+
+min(rmses)
+
+# Predictions with best tune lambda #######
+
+mu <- mean(train_edx$rating)
+
+b_i <- train_edx %>%
+  group_by(movieId) %>%
+  summarize(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- train_edx %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+b_my <- train_edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  group_by(movie_year) %>% 
+  summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
+
+b_ry <- train_edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  left_join(b_my, by = 'movie_year') %>% 
+  group_by(rating_year) %>% 
+  summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+lambda))
+
+reg_movie_user_myear_ryear_effect_pred <- 
+  test_edx %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
+  .$pred
+
+str(reg_movie_user_myear_ryear_effect_pred)
+
+# Regularized Movie + User + Movie Year + Rating Year#####
+
+reg_movie_user_myear_ryear_effect_rmse <- RMSE(reg_movie_user_myear_ryear_effect_pred, 
+                                         test_edx$rating)
+reg_movie_user_myear_ryear_effect_rmse
+#__0.8643021 = 25 Points (prov)
+
+# Provisional table 4: 
+
+data.frame("mu" = naive_rmse, 
+           "bi" = movie_effect_rmse, 
+           "bi_bu" = movie_user_effect_rmse, 
+           "reg_bi_bu" = reg_movie_user_effect_rmse, 
+           "bi_bu_bmy" = movie_user_effect_myear_rmse,
+           "reg_bi_bu_bmy" = reg_movie_user_effect_myear_rmse, 
+           "bi_bu_bmy_bry" = movie_user_effect_myear_ryear_rmse,
+           "reg_bi_bu_bmy_bry" = reg_movie_user_myear_ryear_effect_rmse) %>% 
+  knitr::kable()
+
+# Test Validation 3: must be removed from code still end #######
+# Regularized movie + user effects + year effects
+
+test_val_3 <- 
+  validation_2 %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>% 
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(mu = mu, pred = mu + b_i + b_u + b_my + b_ry)
+
+head(test_val_3)
+
+# 4 Films have b_i = NA, thus pred = NA
+# If there are NAs, RMSE function doens't work, and return NA
+test_val_3 %>%  filter(is.na(pred))
+
+# To solve the problem, we will replace the 4 NAs with "mu"
+# (the avg rating of all movies)
+test_val_3$pred[is.na(test_val_3$pred)] <- mu
+
+# Then we have remove all 4 NAs with mu
+test_val_3 %>%  filter(is.na(pred))
+test_val_3 %>%  filter(is.na(b_i))
+
+# We can now extract predictions...
+test_val_3_pred <-   test_val_3 %>% .$pred
+
+# ...and calculate RMSE over validation test
+test_3 <- RMSE(test_val_3_pred, validation$rating)
+test_3 
+# _0.8649689 = 20 points ######
+
+
+
+
+# ___________________________________########
+##### ADDING GENDER EFFECT ######
+# ___________________________________########
+
+edx <- edx %>% 
+  mutate(genres = as.factor(genres))
+
+# Gender Effects ######
 
 train_edx <- train_edx %>% 
   mutate(genres = as.factor(genres))
@@ -412,6 +800,8 @@ class(train_edx$genres)
 test_edx <- test_edx %>% 
   mutate(genres = as.factor(genres))
 
+head(test_edx$genres)
+
 class(test_edx$genres)
 
 g_i <- train_edx %>% 
@@ -419,6 +809,8 @@ g_i <- train_edx %>%
   left_join(b_u, by = "userId") %>%
   group_by(genres) %>% 
   summarise(g_i = mean(rating) - b_u - b_i - mu)
+
+g_i
 
 movie_user_effect_gender_pred <- 
   test_edx %>%
@@ -433,7 +825,7 @@ head(test_edx)
 
 
 # ___________________________________########
-# RECOMMENDER LAB ######
+# RECOMMENDER LAB NOT RUN!!!! ######
 # ___________________________________########
 
 # As spected, results with Basic Model are very far from goods RMSEs.
@@ -609,3 +1001,9 @@ hybrid_model_l <- Recommender(train_l[1:450], "HYBRID")
 pred_hybrid_l <- predict(hybrid_model_l, known_l, type = "ratings")
 error_hybrid_l <- rbind("hybrid" = calcPredictionAccuracy(hybrid_model_l, unknown_l))
 error_hybrid_l
+
+rm(list = ls())
+
+
+
+
