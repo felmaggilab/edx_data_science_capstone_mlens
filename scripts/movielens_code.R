@@ -159,7 +159,7 @@ edx_little <- edx_little %>%
 # Review of final results
 edx_little
 
-# Applying changes to entire data set
+# Applying changes to entire edx data frame
 # ______________________________________
 
 # Adding rating_date and rating_year ######
@@ -262,7 +262,7 @@ str(naive_pred)
 
 naive_rmse <- RMSE(naive_pred, test_edx$rating)
 naive_rmse
-#__1.060167 = 0 points #####
+#__1.060167 #####
 
 # Movie Effects: b_i ######
 
@@ -288,7 +288,7 @@ str(movie_effect_pred)
 
 movie_effect_rmse <- RMSE(test_edx$rating, movie_effect_pred)
 movie_effect_rmse
-# __0.9432171 = 0 points #####
+# __0.9432171  #####
 
 # Movie User Effects: b_i + b_u #######
 
@@ -305,9 +305,12 @@ movie_user_effect_pred <- test_edx %>%
 
 movie_user_effect_rmse <- RMSE(test_edx$rating, movie_user_effect_pred)
 movie_user_effect_rmse
-# __0.8651897 = 15 points #####
+# __0.8651897 #####
 
 # _______Regularization_________######
+
+# Now: we will apply regularization to see if we get some improvements in our 
+# RMSE
 
 lambdas <- seq(0, 10, 0.25)
 
@@ -371,14 +374,17 @@ str(reg_movie_user_effect_pred)
 
 reg_movie_user_effect_rmse <- RMSE(reg_movie_user_effect_pred, test_edx$rating)
 reg_movie_user_effect_rmse
-# __0.864565 = 20 points (prov) #####
+# __0.864565 #####
+
+# Regularization improve the results significantly.
 
 
 # ___________________________________########
 ##### ADDING TIME MOVIE YEAR EFFECT: b_my ######
 # ___________________________________########
 
-head(edx)
+# Data exploration suggest that there is a relation between movie_year and
+# ratings. So, we will add the effect of the movie_year to the model
 
 # Visualization of ratings vs years
 
@@ -394,7 +400,7 @@ edx %>%
   summarise(ratings = n()) %>% 
   arrange(ratings)
 
-# Adding column b_my #########
+# Previous attempt without regularization #########
 
 movie_year_avgs <- train_edx %>% 
   left_join(movie_avgs, by = 'movieId') %>% 
@@ -413,7 +419,7 @@ movie_user_effect_myear_pred <- test_edx %>%
 
 movie_user_effect_myear_rmse <- RMSE(movie_user_effect_myear_pred, test_edx$rating)
 movie_user_effect_myear_rmse
-#__ 0.8648795 : 15 points (prov) ######## 
+#__ 0.8648795 ######## 
 
 
 # Regularization #########
@@ -493,12 +499,17 @@ str(reg_movie_user_myear_effect_pred)
 reg_movie_user_effect_myear_rmse <- RMSE(reg_movie_user_myear_effect_pred, 
                                          test_edx$rating)
 reg_movie_user_effect_myear_rmse
-#__0.8643021 = 25 Points (prov)
+#__0.8643021 
+
+# Adding Movie Year Effect give us some enhacement over the rmse
 
 
 # ___________________________________########
-##### ADDING RATING YEAR EFFECTS ######
+##### ADDING RATING YEAR EFFECTS: b_ry  ######
 # ___________________________________########
+
+# Data exploration also suggest that there is a relation between rating_year 
+# and ratings. So, we will add the effect of the rating_year to the model
 
 # Visualization of ratings vs rating_years
 
@@ -514,7 +525,8 @@ edx %>%
   summarise(ratings = n()) %>% 
   arrange(ratings)
 
-# Adding column b_ry #########
+
+# Previous attempt without regularization #########
 
 rating_year_avgs <- train_edx %>% 
   left_join(movie_avgs, by = 'movieId') %>% 
@@ -631,9 +643,11 @@ str(reg_movie_user_myear_ryear_effect_pred)
 reg_movie_user_myear_ryear_effect_rmse <- RMSE(reg_movie_user_myear_ryear_effect_pred, 
                                                test_edx$rating)
 reg_movie_user_myear_ryear_effect_rmse
-#__0.8643021 = 25 Points (prov)
+#__0.8643021 
 
-# Provisional table 4: 
+# We have get a RMSE under the Goal
+
+# Provisional table: 
 
 data.frame("mu" = naive_rmse, 
            "bi" = movie_effect_rmse, 
@@ -648,30 +662,32 @@ data.frame("mu" = naive_rmse,
 ##### APPLYING THE FINAL MODEL OVER VALIDATION SET ######
 # ___________________________________########
 
-# Adding same columns to validation set
+# Adding th columns of movie_year and rating_year to validation set
 # ______________________________________
 
 # Adding rating_date and rating_year ######
-validation_2 <- validation %>% mutate(rating_date = as_datetime(timestamp), 
+validation <- validation %>% mutate(rating_date = as_datetime(timestamp), 
                                       rating_year = as.integer(year(rating_date)))
 
 # Creating the new column "movie_year", extracting year from "title" #####
-validation_2 <- validation_2 %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
+validation <- validation %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
 
 # Removing (parenthesis)  from "movie_year" column ####
-movie_years_temp <- validation_2 %>% pull(movie_year)
+movie_years_temp <- validation %>% pull(movie_year)
 movie_years_temp <- str_remove_all(movie_years_temp, "\\(")
 movie_years_temp <- str_remove(movie_years_temp, "\\)")
 
 # Adding the cleaned "movie_years_temp" to data set #####
-validation_2 <- validation_2 %>% 
+validation <- validation %>% 
   mutate(movie_year = as.integer(movie_years_temp))
 
 # Review of final results
-validation_2[ind]
+validation[ind]
+
+# Crating Temporal Table with preds, over validation set.
 
 validation_preds <- 
-  validation_2 %>% 
+  validation %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
   left_join(b_my, by = 'movie_year') %>% 
@@ -684,13 +700,12 @@ head(validation_preds)
 # If there are NAs, RMSE function doens't work, and return NA
 validation_preds %>%  filter(is.na(pred))
 
-# To solve the problem, we will replace the 4 NAs with "mu"
-# (the avg rating of all movies)
+# To solve the problem, we will predict the 4 NAs with "mu"
+# (the avg rating of all movies, which is our best chance to minimize RMSE)
 validation_preds$pred[is.na(validation_preds$pred)] <- mu
 
-# Then we have remove all 4 NAs with mu
+# Then we have remove all 4 NAs,  predicting "mu" for them
 validation_preds %>%  filter(is.na(pred))
-validation_preds %>%  filter(is.na(b_i))
 
 # We can now extract predictions...
 validation_preds <-   validation_preds %>% .$pred
@@ -698,7 +713,7 @@ validation_preds <-   validation_preds %>% .$pred
 # ...and calculate RMSE over validation test
 validation_preds_rmse <- RMSE(validation_preds, validation$rating)
 validation_preds_rmse
-# _0.864852 = 25 points ######
+# _0.864852  ######
 
 final_table <- data.frame("mu" = naive_rmse, 
                           "bi" = movie_effect_rmse, 
