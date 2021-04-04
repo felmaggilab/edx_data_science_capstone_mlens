@@ -116,8 +116,8 @@ class(edx)
 # - rating_year (integer)
 # - rating_date (YY-MM-DD HH:MM:SS POSIXct format)
 
-# Although not decided yet, this change also can be useful to add time effects 
-# in our final model to enhanced the RMSE results (if it is necessary).
+# This change also could be useful to add time effects 
+# in our final model to enhanced the RMSE results
 
 # To test the code, we will create a very reduced version of "edx" data frame
 # first (edx_little). Once the code has been tested, will be applied in the
@@ -164,7 +164,7 @@ edx_little
 
 # Adding rating_date and rating_year ######
 edx <- edx %>% mutate(rating_date = as_datetime(timestamp), 
-                        rating_year = as.integer(year(rating_date)))
+                      rating_year = as.integer(year(rating_date)))
 
 # Creating the new column "movie_year", extracting year from "title" #####
 edx <- edx %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
@@ -181,41 +181,11 @@ edx <- edx %>%
 # Review of final results
 edx[ind]
 
-rm(movie_years_temp)
-# ___________________________________########
-# EXPLORATORY DATA ANALYSIS #######
-# ___________________________________########
-
-# Ratings frecuency 
-edx %>% ggplot(aes(rating)) +
-  geom_density()
-
-mu <- mean(edx$rating)
-mu
-
-# Visualization of ratings vs movie_year
-
-edx %>% 
-  group_by(movie_year) %>% 
-  summarise(movie_year_avgs = mean(rating)) %>% 
-  ggplot(aes(movie_year, movie_year_avgs)) +
-  geom_point() +
-  geom_smooth()
-
-# Visualization of ratings vs rating_year
-
-edx %>% 
-  group_by(rating_year) %>% 
-  summarise(rating_year_avgs = mean(rating)) %>% 
-  ggplot(aes(rating_year, rating_year_avgs)) +
-  geom_point() +
-  geom_smooth()
-
 # ___________________________________########
 #### TEST SET AND TRAIN SET ########
 # ___________________________________########
 
-# Creation of test set y validation set from edx data.frame ######
+# Creation of test set y trin set from edx data frame ######
 
 head(edx)
 
@@ -246,6 +216,35 @@ RMSE <- function(true_ratings, pred_ratings) {
 # 15 points: 0.86500 <= RMSE <= 0.86549 ####
 # 20 points: 0.86490 <= RMSE <= 0.86499 ####
 # 25 points: RMSE < 0.86490 ####
+
+# ___________________________________########
+# EXPLORATORY DATA ANALYSIS #######
+# ___________________________________########
+
+# Ratings frecuency 
+edx %>% ggplot(aes(rating)) +
+  geom_density()
+
+mu <- mean(edx$rating)
+mu
+
+# Visualization of ratings vs movie_year
+
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(movie_year_avgs = mean(rating)) %>% 
+  ggplot(aes(movie_year, movie_year_avgs)) +
+  geom_point() +
+  geom_smooth()
+
+# Visualization of ratings vs rating_year
+
+edx %>% 
+  group_by(rating_year) %>% 
+  summarise(rating_year_avgs = mean(rating)) %>% 
+  ggplot(aes(rating_year, rating_year_avgs)) +
+  geom_point() +
+  geom_smooth()
 
 # ___________________________________########
 ##### TESTING BASIC MODELS ######
@@ -307,7 +306,6 @@ movie_user_effect_pred <- test_edx %>%
 movie_user_effect_rmse <- RMSE(test_edx$rating, movie_user_effect_pred)
 movie_user_effect_rmse
 # __0.8651897 = 15 points #####
-
 
 # _______Regularization_________######
 
@@ -374,37 +372,6 @@ str(reg_movie_user_effect_pred)
 reg_movie_user_effect_rmse <- RMSE(reg_movie_user_effect_pred, test_edx$rating)
 reg_movie_user_effect_rmse
 # __0.864565 = 20 points (prov) #####
-
-# Test Validation 1: MUST BE REMOVED #######
-# Regularized movie + user effects
-
-test_val_1 <- 
-  validation %>% 
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  mutate(mu = mu, pred = mu + b_i + b_u)
-
-head(test_val_1)
-
-# 4 Films have b_i = NA, thus pred = NA
-# If there are NAs, RMSE function doens't work, and return NA
-test_val_1 %>%  filter(is.na(pred))
-
-# To solve the problem, we will replace the 4 NAs with "mu"
-# (the avg rating of all movies)
-test_val_1$pred[is.na(test_val_1$pred)] <- mu
-
-# Then we have remove all 4 NAs with mu
-test_val_1 %>%  filter(is.na(pred))
-test_val_1 %>%  filter(is.na(b_i))
-
-# We can now extract predictions...
-test_val_1_pred <-   test_val_1 %>% .$pred
-
-# ...and calculate RMSE over validation test
-test_1 <- RMSE(test_val_1_pred, validation$rating)
-test_1 
-# __0.8652589 = 15 points ######
 
 
 # ___________________________________########
@@ -529,63 +496,6 @@ reg_movie_user_effect_myear_rmse
 #__0.8643021 = 25 Points (prov)
 
 
-# Test Validation 2: must be removed from code still end #######
-# Regularized movie + user effects + year effects
-
-# Adding new columns to validation set
-# ______________________________________
-
-# Adding rating_date and rating_year ######
-validation_2 <- validation %>% mutate(rating_date = as_datetime(timestamp), 
-                      rating_year = as.integer(year(rating_date)))
-
-# Creating the new column "movie_year", extracting year from "title" #####
-validation_2 <- validation_2 %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
-
-# Removing (parenthesis)  from "movie_year" column ####
-movie_years_temp <- validation_2 %>% pull(movie_year)
-movie_years_temp <- str_remove_all(movie_years_temp, "\\(")
-movie_years_temp <- str_remove(movie_years_temp, "\\)")
-
-# Adding the cleaned "movie_years_temp" to data set #####
-validation_2 <- validation_2 %>% 
-  mutate(movie_year = as.integer(movie_years_temp))
-
-# Review of final results
-validation_2[ind]
-
-rm(movie_years_temp)
-
-test_val_2 <- 
-  validation_2 %>% 
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  left_join(b_my, by = 'movie_year') %>% 
-  mutate(mu = mu, pred = mu + b_i + b_u + b_my)
-
-head(test_val_2)
-
-# 4 Films have b_i = NA, thus pred = NA
-# If there are NAs, RMSE function doens't work, and return NA
-test_val_2 %>%  filter(is.na(pred))
-
-# To solve the problem, we will replace the 4 NAs with "mu"
-# (the avg rating of all movies)
-test_val_2$pred[is.na(test_val_2$pred)] <- mu
-
-# Then we have remove all 4 NAs with mu
-test_val_2 %>%  filter(is.na(pred))
-test_val_2 %>%  filter(is.na(b_i))
-
-# We can now extract predictions...
-test_val_2_pred <-   test_val_2 %>% .$pred
-
-# ...and calculate RMSE over validation test
-test_2 <- RMSE(test_val_2_pred, validation$rating)
-test_2 
-# _0.8649689 = 20 points ######
-
-
 # ___________________________________########
 ##### ADDING RATING YEAR EFFECTS ######
 # ___________________________________########
@@ -628,18 +538,6 @@ movie_user_effect_myear_ryear_rmse <- RMSE(movie_user_effect_myear_ryear_pred,
 movie_user_effect_myear_ryear_rmse
 ## __0.8647913 #######
 
-
-# Provisional table 4: 
-
-data.frame("mu" = naive_rmse, 
-           "bi" = movie_effect_rmse, 
-           "bi_bu" = movie_user_effect_rmse, 
-           "reg_bi_bu" = reg_movie_user_effect_rmse, 
-           "bi_bu_bmy" = movie_user_effect_myear_rmse,
-           "reg_bi_bu_bmy" = reg_movie_user_effect_myear_rmse, 
-           "bi_bu_bmy_bry" = movie_user_effect_myear_ryear_rmse) %>% 
-  knitr::kable()
-
 # Regularization #########
 
 lambdas <- seq(0, 10, 0.25)
@@ -671,8 +569,8 @@ rmses <- sapply(lambdas, function(l){
     left_join(b_my, by = 'movie_year') %>% 
     group_by(rating_year) %>% 
     summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+l))
-    
- predicted_ratings <- 
+  
+  predicted_ratings <- 
     test_edx %>% 
     left_join(b_i, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
@@ -731,7 +629,7 @@ str(reg_movie_user_myear_ryear_effect_pred)
 # Regularized Movie + User + Movie Year + Rating Year#####
 
 reg_movie_user_myear_ryear_effect_rmse <- RMSE(reg_movie_user_myear_ryear_effect_pred, 
-                                         test_edx$rating)
+                                               test_edx$rating)
 reg_movie_user_myear_ryear_effect_rmse
 #__0.8643021 = 25 Points (prov)
 
@@ -741,16 +639,38 @@ data.frame("mu" = naive_rmse,
            "bi" = movie_effect_rmse, 
            "bi_bu" = movie_user_effect_rmse, 
            "reg_bi_bu" = reg_movie_user_effect_rmse, 
-           "bi_bu_bmy" = movie_user_effect_myear_rmse,
            "reg_bi_bu_bmy" = reg_movie_user_effect_myear_rmse, 
-           "bi_bu_bmy_bry" = movie_user_effect_myear_ryear_rmse,
            "reg_bi_bu_bmy_bry" = reg_movie_user_myear_ryear_effect_rmse) %>% 
   knitr::kable()
 
-# Test Validation 3: must be removed from code still end #######
-# Regularized movie + user effects + year effects
 
-test_val_3 <- 
+# ___________________________________########
+##### APPLYING THE FINAL MODEL OVER VALIDATION SET ######
+# ___________________________________########
+
+# Adding same columns to validation set
+# ______________________________________
+
+# Adding rating_date and rating_year ######
+validation_2 <- validation %>% mutate(rating_date = as_datetime(timestamp), 
+                                      rating_year = as.integer(year(rating_date)))
+
+# Creating the new column "movie_year", extracting year from "title" #####
+validation_2 <- validation_2 %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
+
+# Removing (parenthesis)  from "movie_year" column ####
+movie_years_temp <- validation_2 %>% pull(movie_year)
+movie_years_temp <- str_remove_all(movie_years_temp, "\\(")
+movie_years_temp <- str_remove(movie_years_temp, "\\)")
+
+# Adding the cleaned "movie_years_temp" to data set #####
+validation_2 <- validation_2 %>% 
+  mutate(movie_year = as.integer(movie_years_temp))
+
+# Review of final results
+validation_2[ind]
+
+validation_preds <- 
   validation_2 %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
@@ -758,252 +678,38 @@ test_val_3 <-
   left_join(b_ry, by = 'rating_year') %>% 
   mutate(mu = mu, pred = mu + b_i + b_u + b_my + b_ry)
 
-head(test_val_3)
+head(validation_preds)
 
 # 4 Films have b_i = NA, thus pred = NA
 # If there are NAs, RMSE function doens't work, and return NA
-test_val_3 %>%  filter(is.na(pred))
+validation_preds %>%  filter(is.na(pred))
 
 # To solve the problem, we will replace the 4 NAs with "mu"
 # (the avg rating of all movies)
-test_val_3$pred[is.na(test_val_3$pred)] <- mu
+validation_preds$pred[is.na(validation_preds$pred)] <- mu
 
 # Then we have remove all 4 NAs with mu
-test_val_3 %>%  filter(is.na(pred))
-test_val_3 %>%  filter(is.na(b_i))
+validation_preds %>%  filter(is.na(pred))
+validation_preds %>%  filter(is.na(b_i))
 
 # We can now extract predictions...
-test_val_3_pred <-   test_val_3 %>% .$pred
+validation_preds <-   validation_preds %>% .$pred
 
 # ...and calculate RMSE over validation test
-test_3 <- RMSE(test_val_3_pred, validation$rating)
-test_3 
-# _0.8649689 = 20 points ######
-
-
-
-
-# ___________________________________########
-##### ADDING GENDER EFFECT ######
-# ___________________________________########
-
-edx <- edx %>% 
-  mutate(genres = as.factor(genres))
-
-# Gender Effects ######
-
-train_edx <- train_edx %>% 
-  mutate(genres = as.factor(genres))
-
-class(train_edx$genres)
-
-test_edx <- test_edx %>% 
-  mutate(genres = as.factor(genres))
-
-head(test_edx$genres)
-
-class(test_edx$genres)
-
-g_i <- train_edx %>% 
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  group_by(genres) %>% 
-  summarise(g_i = mean(rating) - b_u - b_i - mu)
-
-g_i
-
-movie_user_effect_gender_pred <- 
-  test_edx %>%
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  left_join(g_i, by = "genres") %>% 
-  mutate(pred = mu + b_i + b_u + g_i) %>% 
-  .$pred
-
-head(test_edx)
-  
-
-
-# ___________________________________########
-# RECOMMENDER LAB NOT RUN!!!! ######
-# ___________________________________########
-
-# As spected, results with Basic Model are very far from goods RMSEs.
-# We will try with recommenderlab package. It include several recommend. Alg.
-# including those that are barely explained in the course (SDV, for example)
-
-# Sources ######
-# https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf
-# https://cran.r-project.org/web/packages/recommenderlab/recommenderlab.pdf
-# https://rpubs.com/elias_alegria/intro_recommenderlab
-# https://rpubs.com/umasrinivas/683551
-# http://rstudio-pubs-static.s3.amazonaws.com/287685_258f4041cee643f9aaf7b2b654a82162.html
-# https://rstudio-pubs-static.s3.amazonaws.com/400285_89f33b0f92f5474ea16e745eeaa5681a.html
-# http://www.stats.ox.ac.uk/~sejdinov/teaching/atsml19/UBCF_IBCF.html
-# https://rpubs.com/vamshigvk/whatsthenextmovie
-# https://www.statworx.com/ch/blog/movie-recommendation-with-recommenderlab/
-# https://rpubs.com/Xkong100/505398
-# https://www.r-bloggers.com/2014/12/recommender-systems-101-a-step-by-step-practical-example-in-r/
-
-
-# Features seleccion: userId, movieID, rating ####
-
-edx_recom_df <- edx %>%  select(user = userId, item = movieId, rating = rating)
-
-# Creation of matrix with recommenderlab structure #####
-
-edx_recom_matrix <- edx_recom_df %>% 
-  as("realRatingMatrix") #__as("realRatingMatrix") ####
-
-dim(edx_recom_matrix)
-
-# Visualization for first 30 users and first 30 ratings #####
-
-edx_recom_matrix[1:30, 1:30] %>% getRatingMatrix #__getRatingMatrix ####
-
-# Image of matrix: sparce visualization  #####
-
-image(edx_recom_matrix[1:30, 1:30] %>% getRatingMatrix)
-
-# ___________________________________########
-# MATRIX NORMALIZATION ######
-# ___________________________________########
-
-# User Normalization (Rows) #####
-
-# Center 
-edx_recom_matrix %>%  getRatings %>% hist(main = "Ratings")
-
-edx_recom_matrix_cent <- edx_recom_matrix %>% #__Method = Center #####
-normalize
-
-edx_recom_matrix_cent %>% getRatings %>% 
-  hist(main = "Ratings normalized: center") 
-
-# Z-score
-edx_recom_matrix_z <- edx_recom_matrix %>% 
-  normalize(method="Z-score") #__Method = Z-score #####
-
-# edx_recom_matrix_z %>% getRatings %>% hist("Ratings normalized: Z-score") ERROR
-
-# ___________________________________########
-# CLEANING DATA ######
-# ___________________________________########
-
-# We will work with users that have ranked at least 10 movies, and with 
-# movies ranked at least 20 times
-# Private Note: depending on results, we will change this paramater.
-
-rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
-colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
-
-edx_recom_matrix_cent <- 
-  edx_recom_matrix_cent[,colCounts(edx_recom_matrix_cent) >= 20]
-
-rowCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
-colCounts(edx_recom_matrix_cent) %>% as("matrix") %>% min
-
-#__________________________________________________________________
-#__________________________________________________________________
-
-# ___________________________________########
-# EVALUATION SCHEME LITTLE ######
-# ___________________________________########
-
-# See detais with ?evaluationScheme for further tunning
-
-# You will waite for a while... Be patient! It takes long time.
-
-eval_scheme_little <- evaluationScheme(edx_recom_matrix_cent[1:600], method = "split", train = 0.9, given = 5)
-
-# ___________________________________########
-# I TEST: CENTER LITTLE ######
-# ___________________________________########
-
-train_l <- eval_scheme_little %>% getData("train")
-known_l <- eval_scheme_little %>% getData("known")
-unknown_l <- eval_scheme_little %>% getData("unknown")
-
-# Applying Models #####
-
-#__Random ####
-random_model_l <- Recommender(train_l[1:450], "RANDOM")
-pred_ramdom_l <- predict(random_model_l, known_l, type = "ratings")
-error_random_l <- rbind("random" = calcPredictionAccuracy(pred_ramdom_l, unknown_l))
-error_random_l
-# RMSE      MSE      MAE
-# random 1.424282 2.028579 1.103045
-
-pred_ramdom_l %>% as("data.frame") %>% head
-str(pred_ramdom_l)
-
-test <- pred_ramdom_l %>% as("data.frame")
-class(test)
-
-unique(test$user)
-
-# COMPARING RESULTS with edx entire Matrix
-# RMSE      MSE      MAE
-# random 1.450548 2.104089 1.117895
-
-#__UBCF ERROR ####
-ubcf_model_l <- Recommender(train_l[1:450], "UBCF")
-pred_ubcf_l <- predict(ubcf_model_l, known_l, type = "ratings")
-
-# Error in h(simpleError(msg, call)) : 
-# error in evaluating the argument 'x' in selecting a method for function 't':
-# not-yet-implemented method for <dgCMatrix> %*% <list>
-
-error_ubcf_l <- rbind("ubcf" = calcPredictionAccuracy(pred_ubcf_l, unknown_l))
-error_ubcf_l
-
-#__IBCF ERROR ####
-ibcf_model_l <- Recommender(train_l[1:450], "IBCF")
-pred_ibcf_l <- predict(ibcf_model_l, known_l, type = "ratings")
-error_ibcf_l <- rbind("ubcf" = calcPredictionAccuracy(ibcf_model_l, unknown_l))
-error_ibcf_l
-
-dim(pred_ibcf_l)
-
-# Error in (function (classes, fdef, mtable):
-# unable to find an inherited method for function ‘calcPredictionAccuracy’ for 
-# signature ‘"Recommender", "realRatingMatrix"                                                                                                                                      unable to find an inherited method for function ‘calcPredictionAccuracy’ for signature ‘"Recommender", "realRatingMatrix"’
-
-#__SVD ####
-svd_model_l <- Recommender(train_l[1:450], "SVD")
-pred_svd_l <- predict(svd_model_l, known_l, type = "ratings")
-error_svd_l <- rbind("svd" = calcPredictionAccuracy(pred_svd_l, unknown_l))
-error_svd_l
-# RMSE      MSE       MAE
-# svd 1.108122 1.227935 0.8825007
-
-
-test <- pred_svd_l %>% as("data.frame")
-head(test)
-
-edx_recom_df %>%  filter(user == 10 & item == 294)
-
-
-#__ALS ####
-als_mode_l <- Recommender(train_l, "ALS")
-pred_als_l <- predict(als_mode_l, known_l, type = "ratings")
-error_als_l <- rbind("als" = calcPredictionAccuracy(pred_als_l, unknown_l))
-error_als_l
-# RMSE      MSE       MAE
-# als 1.006225 1.012488 0.7879996
-
-#__HYBRID ERROR ######
-hybrid_model_l <- Recommender(train_l[1:450], "HYBRID")
-
-# Error in (function (..., weights = NULL)  : 
-# No base recommender specified!
-
-pred_hybrid_l <- predict(hybrid_model_l, known_l, type = "ratings")
-error_hybrid_l <- rbind("hybrid" = calcPredictionAccuracy(hybrid_model_l, unknown_l))
-error_hybrid_l
-
-rm(list = ls())
-
-
-
-
+validation_preds_rmse <- RMSE(validation_preds, validation$rating)
+validation_preds_rmse
+# _0.864852 = 25 points ######
+
+final_table <- data.frame("mu" = naive_rmse, 
+                          "bi" = movie_effect_rmse, 
+                          "bi_bu" = movie_user_effect_rmse, 
+                          "reg_bi_bu" = reg_movie_user_effect_rmse, 
+                          "reg_bi_bu_bmy" = reg_movie_user_effect_myear_rmse, 
+                          "reg_bi_bu_bmy_bry" = reg_movie_user_myear_ryear_effect_rmse,
+                          "validation_final_model" = validation_preds_rmse) %>% 
+  knitr::kable()
+
+final_table
+
+
+# rm(list = ls())
