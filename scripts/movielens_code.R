@@ -757,5 +757,6 @@ validation_preds_rmse
 # __0.864853 ######
 
 head(validation)
+str(validation)
 
 # rm(list = ls())
