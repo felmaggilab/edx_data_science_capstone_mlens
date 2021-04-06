@@ -499,7 +499,7 @@ str(reg_movie_user_myear_effect_pred)
 reg_movie_user_effect_myear_rmse <- RMSE(reg_movie_user_myear_effect_pred, 
                                          test_edx$rating)
 reg_movie_user_effect_myear_rmse
-#__0.8643021 
+#__0.8643021 #####
 
 # Adding Movie Year Effect give us some enhacement over the rmse
 
@@ -643,7 +643,7 @@ str(reg_movie_user_myear_ryear_effect_pred)
 reg_movie_user_myear_ryear_effect_rmse <- RMSE(reg_movie_user_myear_ryear_effect_pred, 
                                                test_edx$rating)
 reg_movie_user_myear_ryear_effect_rmse
-#__0.8641702
+#__0.8641702 #####
 
 # We have get a RMSE under the Goal
 
@@ -665,7 +665,7 @@ data.frame("mu" = naive_rmse,
 # Adding th columns of movie_year and rating_year to validation set
 # ______________________________________
 
-# Adding rating_date and rating_year ######
+# Adding rating_date and rating_year to validation set ######
 validation <- validation %>% 
   mutate(rating_date = as_datetime(timestamp), 
                                       rating_year = as.integer(year(rating_date)))
@@ -686,7 +686,7 @@ validation <- validation %>%
 # Review of final results
 validation[ind]
 
-# Creating Temporal Table with preds, over validation set.
+# Creating Temporal Table with preds, over validation set #####
 
 validation_preds <- 
   validation %>% 
@@ -699,21 +699,21 @@ validation_preds <-
 head(validation_preds)
 str(validation_preds)
 
-# 4 Films have b_i = NA, thus pred = NA
-# If there are NAs, RMSE function doens't work, and return NA
+# 4 Films have b_i = NA, thus pred = NA #####
+# __If there are NAs, RMSE function doens't work, and return NA ####
 validation_preds %>%  filter(is.na(pred))
 
-# To solve the problem, we will predict the 4 NAs with "mu"
+# To solve the problem, we will predict the 4 NAs with "mu" ####
 # (the avg rating of all movies, which is our best chance to minimize RMSE)
 validation_preds$pred[is.na(validation_preds$pred)] <- mu
 
-# Then we have remove all 4 NAs,  predicting "mu" for them
+# Then we have remove all 4 NAs,  predicting "mu" for them #####
 validation_preds %>%  filter(is.na(pred))
 
-# We can now extract predictions...
+# We can now extract predictions...#####
 validation_preds <-   validation_preds %>% .$pred
 
-# ...and calculate RMSE over validation test
+# ...and calculate RMSE over validation test #####
 validation_preds_rmse <- RMSE(validation_preds, validation$rating)
 validation_preds_rmse
 # __0.864852  ######
@@ -754,7 +754,7 @@ validation_preds <-   validation_preds %>% .$pred
 
 validation_preds_rmse <- RMSE(validation_preds, validation_2$rating)
 validation_preds_rmse
-# __0.864853 ######
+# __0.864853 #
 
 head(validation)
 str(validation)
