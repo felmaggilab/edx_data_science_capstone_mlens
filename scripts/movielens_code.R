@@ -758,6 +758,4 @@ validation_preds_rmse
 
 head(validation)
 
-edx %>%  filter(timestamp == 868246450)
-
 # rm(list = ls())
