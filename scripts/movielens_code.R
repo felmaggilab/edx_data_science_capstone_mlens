@@ -185,7 +185,8 @@ edx[ind]
 #### TEST SET AND TRAIN SET ########
 # ___________________________________########
 
-# Creation of test set y trin set from edx data frame ######
+# Creation of test set y train set from edx data frame ######
+# Note that validation set will not be used during trainig and tunning
 
 head(edx)
 
@@ -315,6 +316,7 @@ movie_user_effect_rmse
 lambdas <- seq(0, 10, 0.25)
 
 # Lambda best-tune to Move Effects and User Efects Regularization #####
+# Here we don't use the test set at all, only the train set.
 
 rmses <- sapply(lambdas, function(l){
   
@@ -330,31 +332,32 @@ rmses <- sapply(lambdas, function(l){
     summarize(b_u = sum(rating - b_i - mu)/(n()+l))
   
   predicted_ratings <- 
-    test_edx %>% 
+    train_edx %>% 
     left_join(b_i, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
     mutate(pred = mu + b_i + b_u) %>%
     .$pred
   
-  return(RMSE(predicted_ratings, test_edx$rating))
+  return(RMSE(predicted_ratings, train_edx$rating))
 })
 
 qplot(lambdas, rmses)  
 
 lambda <- lambdas[which.min(rmses)]
 lambda
+# 0.5
 
 min(rmses)
+# __0.8562963 #######
 
 # Predictions with best tune lambda #######
+# Here we make predictions over the test set, using best tune
 
 mu <- mean(train_edx$rating)
 
 b_i <- train_edx %>%
   group_by(movieId) %>%
   summarize(b_i = sum(rating - mu)/(n()+lambda))
-
-head(b_i)
 
 b_u <- train_edx %>% 
   left_join(b_i, by="movieId") %>%
@@ -374,9 +377,7 @@ str(reg_movie_user_effect_pred)
 
 reg_movie_user_effect_rmse <- RMSE(reg_movie_user_effect_pred, test_edx$rating)
 reg_movie_user_effect_rmse
-# __0.864565 #####
-
-# Regularization improve the results significantly.
+# __0.8650327 #####
 
 
 # ___________________________________########
@@ -427,6 +428,7 @@ movie_user_effect_myear_rmse
 lambdas <- seq(0, 10, 0.25)
 
 # Lambda best-tune to Movie +  User + Year Effects Regularization #####
+# Here we don't use the test set at all, only the train set.
 
 rmses <- sapply(lambdas, function(l){
   
@@ -448,24 +450,27 @@ rmses <- sapply(lambdas, function(l){
     summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+l))
   
   predicted_ratings <- 
-    test_edx %>% 
+    train_edx %>% 
     left_join(b_i, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
     left_join(b_my, by = 'movie_year') %>% 
     mutate(pred = mu + b_i + b_u + b_my) %>%
     .$pred
   
-  return(RMSE(predicted_ratings, test_edx$rating))
+  return(RMSE(predicted_ratings, train_edx$rating))
 })
 
 qplot(lambdas, rmses)  
 
 lambda <- lambdas[which.min(rmses)]
 lambda
+# 0.25
 
 min(rmses)
+# 0.855974
 
 # Predictions with best tune lambda #######
+# Here we make predictions over the test set, using best tune
 
 mu <- mean(train_edx$rating)
 
@@ -499,9 +504,9 @@ str(reg_movie_user_myear_effect_pred)
 reg_movie_user_effect_myear_rmse <- RMSE(reg_movie_user_myear_effect_pred, 
                                          test_edx$rating)
 reg_movie_user_effect_myear_rmse
-#__0.8643021 #####
+#__0.8647968 #####
 
-# Adding Movie Year Effect give us some enhacement over the rmse
+# Adding Movie Year Effect improve the RSME 
 
 
 # ___________________________________########
@@ -535,8 +540,6 @@ rating_year_avgs <- train_edx %>%
   group_by(rating_year) %>% 
   summarise(b_ry = mean(rating - mu - b_i - b_u - b_my))
 
-head(rating_year_avgs)
-
 movie_user_effect_myear_ryear_pred <- test_edx %>% 
   left_join(movie_avgs, by = 'movieId') %>% 
   left_join(user_avgs, by = 'userId') %>%  
@@ -555,6 +558,7 @@ movie_user_effect_myear_ryear_rmse
 lambdas <- seq(0, 10, 0.25)
 
 # Lambda best-tune to Movie +  User + Year Effects Regularization #####
+# Here we don't use the test set at all, only the train set.
 
 rmses <- sapply(lambdas, function(l){
   
@@ -583,7 +587,7 @@ rmses <- sapply(lambdas, function(l){
     summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+l))
   
   predicted_ratings <- 
-    test_edx %>% 
+    train_edx %>% 
     left_join(b_i, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
     left_join(b_my, by = 'movie_year') %>%
@@ -591,17 +595,20 @@ rmses <- sapply(lambdas, function(l){
     mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
     .$pred
   
-  return(RMSE(predicted_ratings, test_edx$rating))
+  return(RMSE(predicted_ratings, train_edx$rating))
 })
 
 qplot(lambdas, rmses)  
 
 lambda <- lambdas[which.min(rmses)]
 lambda
+# 0.5
 
 min(rmses)
+0.8558851
 
 # Predictions with best tune lambda #######
+# Here we make predictions over the test set, using best tune
 
 mu <- mean(train_edx$rating)
 
@@ -643,7 +650,7 @@ str(reg_movie_user_myear_ryear_effect_pred)
 reg_movie_user_myear_ryear_effect_rmse <- RMSE(reg_movie_user_myear_ryear_effect_pred, 
                                                test_edx$rating)
 reg_movie_user_myear_ryear_effect_rmse
-#__0.8641702 #####
+#__0.864636 #####
 
 # We have get a RMSE under the Goal
 
@@ -659,11 +666,54 @@ data.frame("mu" = naive_rmse,
 
 
 # ___________________________________########
-##### APPLYING THE FINAL MODEL OVER VALIDATION SET ######
+##### APPLYING THE FINAL MODEL OVER ENTIRE EDX SET ######
 # ___________________________________########
 
-# Adding th columns of movie_year and rating_year to validation set
-# ______________________________________
+mu <- mean(edx$rating)
+
+b_i <- edx %>%
+  group_by(movieId) %>%
+  summarize(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- edx %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+b_my <- edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  group_by(movie_year) %>% 
+  summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
+
+b_ry <- edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  left_join(b_my, by = 'movie_year') %>% 
+  group_by(rating_year) %>% 
+  summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+lambda))
+
+edx_reg_movie_user_myear_ryear_effect_pred <- 
+  edx %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
+  .$pred
+
+str(edx_reg_movie_user_myear_ryear_effect_pred)
+
+# Regularized Movie + User + Movie Year + Rating Year#####
+
+edx_reg_movie_user_myear_ryear_effect_rmse <- RMSE(edx_reg_movie_user_myear_ryear_effect_pred, 
+                                               edx$rating)
+edx_reg_movie_user_myear_ryear_effect_rmse
+# __0.8562849 #####
+
+# ___________________________________########
+##### APPLYING THE FINAL MODEL OVER VALIDATION SET ######
+# ___________________________________########
 
 # Adding rating_date and rating_year to validation set ######
 validation <- validation %>% 
@@ -686,7 +736,7 @@ validation <- validation %>%
 # Review of final results
 validation[ind]
 
-# Creating Temporal Table with preds, over validation set #####
+# Preds over validation set #####
 
 validation_preds <- 
   validation %>% 
@@ -694,69 +744,38 @@ validation_preds <-
   left_join(b_u, by = "userId") %>%
   left_join(b_my, by = 'movie_year') %>% 
   left_join(b_ry, by = 'rating_year') %>% 
-  mutate(mu = mu, pred = mu + b_i + b_u + b_my + b_ry)
+  mutate(mu = mu, pred = mu + b_i + b_u + b_my + b_ry) %>% 
+  .$pred
 
 head(validation_preds)
 str(validation_preds)
 
-# 4 Films have b_i = NA, thus pred = NA #####
-# __If there are NAs, RMSE function doens't work, and return NA ####
-validation_preds %>%  filter(is.na(pred))
-
-# To solve the problem, we will predict the 4 NAs with "mu" ####
-# (the avg rating of all movies, which is our best chance to minimize RMSE)
-validation_preds$pred[is.na(validation_preds$pred)] <- mu
-
-# Then we have remove all 4 NAs,  predicting "mu" for them #####
-validation_preds %>%  filter(is.na(pred))
-
-# We can now extract predictions...#####
-validation_preds <-   validation_preds %>% .$pred
-
-# ...and calculate RMSE over validation test #####
+# RMSE over validation set #####
 validation_preds_rmse <- RMSE(validation_preds, validation$rating)
 validation_preds_rmse
-# __0.864852  ######
+# __0.8648047 ######
 
-final_table <- data.frame("mu" = naive_rmse, 
-                          "bi" = movie_effect_rmse, 
-                          "bi_bu" = movie_user_effect_rmse, 
-                          "reg_bi_bu" = reg_movie_user_effect_rmse, 
-                          "reg_bi_bu_bmy" = reg_movie_user_effect_myear_rmse, 
-                          "reg_bi_bu_bmy_bry" = reg_movie_user_myear_ryear_effect_rmse,
-                          "validation_final_model" = validation_preds_rmse) %>% 
+final_table <- data.frame(model = c("mu", 
+                                    "bi", 
+                                    "bi_bu", 
+                                    "reg_bi_bu", 
+                                    "reg_bi_bu_bmy", 
+                                    "reg_bi_bu_bmy_bry", 
+                                    "edx_reg_bi_bu_bmy_bry", 
+                                    "validation_final_model"), 
+                          rmse = c(naive_rmse, 
+                                   movie_effect_rmse,  
+                                   movie_user_effect_rmse, 
+                                   reg_movie_user_effect_rmse,  
+                                   reg_movie_user_effect_myear_rmse,
+                                   reg_movie_user_myear_ryear_effect_rmse,
+                                   edx_reg_movie_user_myear_ryear_effect_rmse,
+                                   validation_preds_rmse)) %>% 
   knitr::kable()
 
 final_table
 
 
-# Results are almost the same if we filter the four films with pred = NA,
-# before make the predictions.
 
-validation_2 <- validation %>% 
-  filter(!timestamp == 1226618639 &
-           !timestamp == 1222545120 &
-           !timestamp == 1228925653 &
-           !timestamp == 1182821990)
-
-validation_preds <- 
-  validation_2 %>% 
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  left_join(b_my, by = 'movie_year') %>% 
-  left_join(b_ry, by = 'rating_year') %>% 
-  mutate(mu = mu, pred = mu + b_i + b_u + b_my + b_ry)
-
-head(validation_preds)
-str(validation_preds)
-
-validation_preds <-   validation_preds %>% .$pred
-
-validation_preds_rmse <- RMSE(validation_preds, validation_2$rating)
-validation_preds_rmse
-# __0.864853 #
-
-head(validation)
-str(validation)
 
 # rm(list = ls())
