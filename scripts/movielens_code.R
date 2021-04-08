@@ -186,7 +186,7 @@ edx[ind]
 # ___________________________________########
 
 # Creation of test set y train set from edx data frame ######
-# Note that validation set will not be used during trainig and tunning
+# Note that validation set will not be used during training and tuning
 
 head(edx)
 
@@ -251,7 +251,8 @@ edx %>%
 ##### TESTING BASIC MODELS ######
 # ___________________________________########
 # We will start testing very basic models (included on bibliography of the 
-# course, just for basic testing process)
+# course, just for basic testing process, and see how rmse improves after each
+# model change)
 
 # _______No regularization_________ #####
 
@@ -271,7 +272,7 @@ mu <- mean(train_edx$rating)
 
 movie_avgs <- train_edx %>% 
   group_by(movieId) %>% 
-  summarise(b_i = mean(rating-mu))
+  summarise(b_i = mean(rating-mu)) 
 
 head(movie_avgs)
 
@@ -429,6 +430,7 @@ lambdas <- seq(0, 10, 0.25)
 
 # Lambda best-tune to Movie +  User + Year Effects Regularization #####
 # Here we don't use the test set at all, only the train set.
+# This process takes some time. Please be patient.
 
 rmses <- sapply(lambdas, function(l){
   
@@ -559,6 +561,7 @@ lambdas <- seq(0, 10, 0.25)
 
 # Lambda best-tune to Movie +  User + Year Effects Regularization #####
 # Here we don't use the test set at all, only the train set.
+# This process takes some time. Please be patient.
 
 rmses <- sapply(lambdas, function(l){
   
@@ -669,7 +672,8 @@ data.frame("mu" = naive_rmse,
 ##### APPLYING THE FINAL MODEL OVER ENTIRE EDX SET ######
 # ___________________________________########
 
-# Here we use the lambdas that we got in the previous step.
+# Here we use the lambdas that we got in the previous step, over the
+# entire edx set.
 
 mu <- mean(edx$rating)
 
@@ -716,6 +720,9 @@ edx_reg_movie_user_myear_ryear_effect_rmse
 # ___________________________________########
 ##### APPLYING THE FINAL MODEL OVER VALIDATION SET ######
 # ___________________________________########
+
+#Now, we apply the final model trained with edx set, over the validation set.
+# Note that this is the first and unique time that we use the validation set.
 
 # Adding rating_date and rating_year to validation set ######
 validation <- validation %>% 
