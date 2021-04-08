@@ -669,6 +669,8 @@ data.frame("mu" = naive_rmse,
 ##### APPLYING THE FINAL MODEL OVER ENTIRE EDX SET ######
 # ___________________________________########
 
+# Here we use the lambdas that we got in the previous step.
+
 mu <- mean(edx$rating)
 
 b_i <- edx %>%
