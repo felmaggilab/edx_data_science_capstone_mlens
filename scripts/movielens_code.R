@@ -2,7 +2,7 @@
 # DATA DOWNLOAD AND SETS CREATION #######
 # ___________________________________########
 
-# In order to make this code fully reproducible, we have included here the code 
+# In order to make this project fully reproducible, we have included here the code 
 # provided in the Edx Harvard Data Science Capstone Course (HarvardX PH125.9x), 
 # to download the dataset and create the test and validation sets.
 
@@ -106,7 +106,7 @@ head(edx)
 class(edx)
 
 # ___________________________________########
-# ADDING NEW COLUMNS#######
+# ADDING NEW COLUMNS #######
 # movie_year, rating_date, rating_year ####
 # ___________________________________########
 
@@ -124,7 +124,6 @@ class(edx)
 # entire dataset. This reduced version will be used along this project for 
 # similar purposes.
 
-
 # Creating and index with short and large movie names (with parenthesis), 
 # needed to datawrangling tests
 ind <- c(1, 2, 3, 4, 5, 6, 21, 29, 39, 47, 67, 107, 108, 109, 112, 121, 
@@ -141,7 +140,6 @@ edx_little <- edx_little %>% mutate(rating_date = as_datetime(timestamp),
 class(edx_little$rating_year)
 
 # Creating the new column "movie_year", extracting year from "title"
-
 # We use the "string" package, so if necessary you need to download it
 
 edx_little <- edx_little %>% 
@@ -280,7 +278,8 @@ mu <- mean(train_edx$rating)
 
 movie_avgs <- train_edx %>% 
   group_by(movieId) %>% 
-  summarise(b_i = mean(rating-mu)) 
+  summarise(b_i = mean(rating-mu))  # Movie effect is calculated as the mean
+# of rating minus the general mean for all movies.
 
 head(movie_avgs)
 
@@ -305,7 +304,10 @@ movie_effect_rmse
 user_avgs <- train_edx %>% 
   left_join(movie_avgs, by = "movieId") %>% 
   group_by(userId) %>% 
-  summarise(b_u = mean(rating - mu - b_i))
+  summarise(b_u = mean(rating - mu - b_i)) # User effect is calculated as 
+# the mean of rating minus the general mean minus the movie effect 
+# for each user. This is an approximation due to apply a lm model is two low in 
+# this case
 
 movie_user_effect_pred <- test_edx %>% 
   left_join(movie_avgs, by = 'movieId') %>% 
@@ -457,7 +459,9 @@ rmses <- sapply(lambdas, function(l){
     left_join(b_i, by = 'movieId') %>% 
     left_join(b_u, by = 'userId') %>% 
     group_by(movie_year) %>% 
-    summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+l))
+    summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+l)) # We apply here the
+# same process used for user effects. This approach will be used for every new
+# element that we will add at the model
   
   predicted_ratings <- 
     train_edx %>% 
@@ -515,9 +519,6 @@ reg_movie_user_effect_myear_rmse <- RMSE(reg_movie_user_myear_effect_pred,
                                          test_edx$rating)
 reg_movie_user_effect_myear_rmse
 #__0.8647968 #####
-
-# Adding Movie Year Effect improve the RSME 
-
 
 # ___________________________________########
 ##### ADDING RATING YEAR EFFECTS: b_ry  ######
@@ -718,7 +719,7 @@ edx_reg_movie_user_myear_ryear_effect_pred <-
 
 str(edx_reg_movie_user_myear_ryear_effect_pred)
 
-# Regularized Movie + User + Movie Year + Rating Year#####
+# Regularized Movie + User + Movie Year + Rating Year #####
 
 edx_reg_movie_user_myear_ryear_effect_rmse <- RMSE(edx_reg_movie_user_myear_ryear_effect_pred, 
                                                edx$rating)
@@ -729,9 +730,16 @@ edx_reg_movie_user_myear_ryear_effect_rmse
 ##### EXPLORING GENDER EFFECT ######
 # ___________________________________########
 
+# In order to use all the data provided in the data set, we will explore the
+# gender effect. At this point, we are not sure if this approach will introduce
+# noise to the model or, on the contrary, it will improve the rmse.
+
+# To add gender effect, we will separate genders by row (this change add more)
+# rows to the data sets.
+
 # Separation of gender by rows
-# Every combination of userId and MoviId gets the same number of rows that 
-# the differnts movie genders
+# Each combination of userId and movieId will now have as many rows as 
+# genres the movie has.
 
 edx_g <- edx %>% separate_rows(genres, sep = "\\|") # It takes some time!
 
@@ -740,8 +748,30 @@ test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
 
 head(edx_g) %>% knitr::kable()
 
+edx_g %>% 
+  group_by(genres) %>% 
+  ggplot(aes(genres, rating)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+edx_g %>% 
+  group_by(userId) %>% 
+  mutate(count = n()) %>% 
+  arrange(desc(count))
+
+user_59269 <- edx_g %>% filter(userId == 59269)
+
+
+user_59269 %>% 
+  filter(!is.na(genres)) %>% 
+  group_by(genres) %>% 
+  mutate(avgs_rating = mean(rating))  %>%
+  ggplot(aes(genres, avgs_rating)) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 # Regularization #########
+# In this case we directly apply regularization
 
 lambdas <- seq(0, 10, 0.25)
 
@@ -868,8 +898,6 @@ reg_movie_user_myear_ryear_gender_effect_pred <-
 # Here he change the previous code: final preds are the mean of all preds
 # related to every movieId and userId combination
 
-str(reg_movie_user_myear_ryear_gender_effect_pred)
-
 # Regularized Movie + User + Movie Year + Rating Year + Gender #####
 
 reg_movie_user_myear_ryear_effect_gender_rmse <- 
@@ -899,7 +927,7 @@ revision_preds_g <-
 
 # For example, userId 325 have rated a lot of movies. If wee see the second one
 # (Star Trek: Generation), we note that for every genre we get an slightly
-# different rate. But we need give only one rate for that user, an that movie.
+# different rate. But we need give only one rate for that user, and that movie.
 
 revision_preds_g %>% filter(userId == 325) %>% 
   select(userId, movieId, title, genres, rating, pred) %>%
@@ -915,10 +943,10 @@ revision_preds_g <-
   left_join(b_my, by = 'movie_year') %>%
   left_join(b_ry, by = 'rating_year') %>% 
   left_join(b_g, by = 'genres') %>% 
-  group_by(userId, movieId) %>% 
-  mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g))
+  group_by(userId, movieId) %>% # <- Change
+  mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) # <- Change (mean)
 
-revision_preds_g %>% filter(userId == 325) %>% 
+revision_preds_g %>% filter(userId == 59269) %>% 
   select(userId, movieId, title, genres, rating, pred) %>%
   knitr::kable()
 
@@ -926,8 +954,8 @@ revision_preds_g %>% filter(userId == 325) %>%
 ##### APPLYING THE MODEL OVER ENTIRE EDX_G SET ######
 # ___________________________________########
 
-mu <- mean(edx_g$rating) 
-# mu <- mean(train_edx$rating)
+mu <- mean(edx_g$rating) #       <- rmse = 0.8534774
+# mu <- mean(train_edx$rating) # <- rmse = 0.8534776 
 
 b_i <- edx_g %>%
   group_by(movieId) %>%
@@ -985,7 +1013,7 @@ edx_g_reg_movie_user_myear_ryear_effect_gender_rmse
 #__0.8534774########
 
 
-# Adding the gender effect improves the rmse over the entire EDX data set
+# Adding the gender effect over the entire EDX data set improves the rmse 
 # that we got with the previous model. 
 
 # We will apply now the final model, train with the entire EDX data set,
@@ -1042,7 +1070,8 @@ validation_preds <-
 # RMSE over validation set #####
 validation_preds_rmse <- RMSE(validation_preds, validation_g$rating)
 validation_preds_rmse
-# __0.8627351 ######
+# __0.8627351 ###### : mu <- mean(edx_g$rating)
+# __0.8627354 ###### : mu <- mean(train_edx$rating)
 
 # Revision
 
@@ -1079,8 +1108,8 @@ final_table <- data.frame(model = c("mu",
                                     "reg_bi_bu", 
                                     "reg_bi_bu_bmy", 
                                     "reg_bi_bu_bmy_bry", 
-                                    "edx_reg_bi_bu_bmy_bry", 
-                                    "reg_bi_bu_bmy_bry_b_g",
+                                     "reg_bi_bu_bmy_bry_b_g",
+                                    "edx_reg_bi_bu_bmy_bry",
                                     "edx_g_reg_bi_bu_bmy_bry_b_g",
                                     "validation_final_model"), 
                           rmse = c(naive_rmse, 
@@ -1089,8 +1118,8 @@ final_table <- data.frame(model = c("mu",
                                    reg_movie_user_effect_rmse,  
                                    reg_movie_user_effect_myear_rmse,
                                    reg_movie_user_myear_ryear_effect_rmse,
-                                   edx_reg_movie_user_myear_ryear_effect_rmse,
                                    reg_movie_user_myear_ryear_effect_gender_rmse,
+                                   edx_reg_movie_user_myear_ryear_effect_rmse,
                                    edx_g_reg_movie_user_myear_ryear_effect_gender_rmse,
                                    validation_preds_rmse)) %>% 
   knitr::kable()
