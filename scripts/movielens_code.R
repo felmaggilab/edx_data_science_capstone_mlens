@@ -196,6 +196,8 @@ edx[ind]
 
 head(edx)
 
+# We will use 90% of data to train, and 10% of data to test.
+
 set.seed(1970, sample.kind="Rounding")
 test_index <- createDataPartition(y = edx$rating, times = 1, p = 0.1,
                                   list = FALSE)
@@ -228,14 +230,91 @@ RMSE <- function(true_ratings, pred_ratings) {
 # EXPLORATORY DATA ANALYSIS #######
 # ___________________________________########
 
+# color-blind-friendly palette (gray)
+
+cbPalette <- c("gray" = "#999999", 
+               "orange" = "#E69F00", 
+               "soft_blue" = "#56B4E9", 
+               "yellow" = "#009E73",
+               "green" = "#F0E442", 
+               "dark_blue" = "#0072B2", 
+               "red" = "#D55E00", 
+               "pink" = "#CC79A7")
+
+dim(edx) # dim edx######
+# 9000055       9
+
+length(unique(edx$movieId)) # Number of movies #####
+# 10677
+
+length(unique(edx$userId)) # Number of users #####
+# 69878
+
 # Ratings frecuency 
 edx %>% ggplot(aes(rating)) +
-  geom_density()
+  geom_density(fill = "#0072B2") +
+  labs(title = "Rating frecuency")
 
-mu <- mean(edx$rating)
-mu
+avg_rating <- mean(edx$rating) # avg rating ######
+avg_rating
+# 3.512465 
 
-# Visualization of ratings vs movie_year
+sd_rating <- sd(edx$rating) # sd rating ######
+sd_rating
+# 1.060331
+
+# Distribution of avg. ratings per movie ######
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating)) +
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
+  labs(title = "Distribution of avg. ratings per movie")
+
+# Distribution of avg. ratings per user ######
+edx %>% 
+  group_by(userId) %>% 
+  mutate(avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating)) +
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
+  labs(title = "Distribution of avg. ratings per user")
+
+edx %>% arrange(movie_year)
+# Films from 1915 to 2008
+
+edx %>% arrange(rating_year)
+# Ratings from 1995 to 2008
+
+# Number of ratings by movie
+edx %>% 
+  group_by(title) %>% 
+  summarise(ratings = n()) %>% 
+  arrange(desc(ratings)) %>% 
+  head(15) %>% 
+  knitr::kable()
+
+edx %>% 
+  group_by(title) %>% 
+  summarise(ratings = n()) %>% 
+  arrange(desc(ratings)) %>% 
+  tail(15) %>% 
+  knitr::kable()
+
+# Number of ratings by user
+edx %>% 
+  group_by(userId) %>% 
+  summarise(ratings = n()) %>% 
+  arrange(desc(ratings)) %>% 
+  head(15) %>% 
+  knitr::kable()
+
+edx %>% 
+  group_by(userId) %>% 
+  summarise(ratings = n()) %>% 
+  tail(n = 15) %>% 
+  knitr::kable()
+
+# Visualization of average ratings vs movie_year #####
 
 edx %>% 
   group_by(movie_year) %>% 
@@ -244,7 +323,11 @@ edx %>%
   geom_point() +
   geom_smooth()
 
-# Visualization of ratings vs rating_year
+# There is a clear effect of the premiere year, on the average ratings. 
+# This must be taken into account in our final model
+
+
+# Visualization of average ratings vs rating_year #####
 
 edx %>% 
   group_by(rating_year) %>% 
@@ -252,6 +335,10 @@ edx %>%
   ggplot(aes(rating_year, rating_year_avgs)) +
   geom_point() +
   geom_smooth()
+
+# There is a certain effect of the rating year on the average ratings. 
+# We will add this to the model, but the result on the rmse should not 
+# be very pronounced.
 
 # ___________________________________########
 ##### TESTING BASIC MODELS ######
@@ -395,22 +482,25 @@ reg_movie_user_effect_rmse
 ##### ADDING TIME MOVIE YEAR EFFECT: b_my ######
 # ___________________________________########
 
-# Data exploration suggest that there is a relation between movie_year and
-# ratings. So, we will add the effect of the movie_year to the model
+# Data exploration suggest that there is a strong relation between movie_year 
+# and average ratings. So, we will add the effect of the movie_year to the model
 
-# Visualization of ratings vs years
-
-edx %>% 
-  group_by(movie_year) %>% 
-  summarise(movie_year_avgs = mean(rating)) %>% 
-  ggplot(aes(movie_year, movie_year_avgs)) +
-  geom_point() +
-  geom_smooth()
+# However, there are some years with very few ratings. So, regularization is 
+# necessary
 
 edx %>% 
   group_by(movie_year) %>% 
   summarise(ratings = n()) %>% 
-  arrange(ratings)
+  arrange(ratings) %>% 
+  top_n(-10) %>% 
+  knitr::kable()
+
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(ratings = n()) %>% 
+  arrange(desc(ratings)) %>% 
+  top_n(10) %>% 
+  knitr::kable()
 
 # Previous attempt without regularization #########
 
@@ -460,8 +550,8 @@ rmses <- sapply(lambdas, function(l){
     left_join(b_u, by = 'userId') %>% 
     group_by(movie_year) %>% 
     summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+l)) # We apply here the
-# same process used for user effects. This approach will be used for every new
-# element that we will add at the model
+  # same process used for user effects. This approach will be used for every new
+  # element that we will add at the model
   
   predicted_ratings <- 
     train_edx %>% 
@@ -722,7 +812,7 @@ str(edx_reg_movie_user_myear_ryear_effect_pred)
 # Regularized Movie + User + Movie Year + Rating Year #####
 
 edx_reg_movie_user_myear_ryear_effect_rmse <- RMSE(edx_reg_movie_user_myear_ryear_effect_pred, 
-                                               edx$rating)
+                                                   edx$rating)
 edx_reg_movie_user_myear_ryear_effect_rmse
 # __0.8562849 #####
 
@@ -754,12 +844,21 @@ edx_g %>%
   geom_boxplot() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
+edx_g %>% # NOT RUN! Make test before
+  group_by(genres) %>% 
+  mutate(avg_rating = mean(rating)) %>% 
+  knitr::kable()
+
+
 edx_g %>% 
   group_by(userId) %>% 
   mutate(count = n()) %>% 
   arrange(desc(count))
 
 user_59269 <- edx_g %>% filter(userId == 59269)
+
+length((unique(user_59269 %>% pull(movieId))))
+# 6616 películas rateadas
 
 
 user_59269 %>% 
@@ -946,7 +1045,7 @@ revision_preds_g <-
   group_by(userId, movieId) %>% # <- Change
   mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) # <- Change (mean)
 
-revision_preds_g %>% filter(userId == 59269) %>% 
+revision_preds_g %>% filter(userId == 59269 & genres == "Film-Noir") %>% 
   select(userId, movieId, title, genres, rating, pred) %>%
   knitr::kable()
 
@@ -1030,7 +1129,7 @@ edx_g_reg_movie_user_myear_ryear_effect_gender_rmse
 # Adding rating_date and rating_year to validation set ######
 validation <- validation %>% 
   mutate(rating_date = as_datetime(timestamp), 
-                                      rating_year = as.integer(year(rating_date)))
+         rating_year = as.integer(year(rating_date)))
 
 # Creating the new column "movie_year", extracting year from "title" #####
 validation <- validation %>% 
@@ -1108,7 +1207,7 @@ final_table <- data.frame(model = c("mu",
                                     "reg_bi_bu", 
                                     "reg_bi_bu_bmy", 
                                     "reg_bi_bu_bmy_bry", 
-                                     "reg_bi_bu_bmy_bry_b_g",
+                                    "reg_bi_bu_bmy_bry_b_g",
                                     "edx_reg_bi_bu_bmy_bry",
                                     "edx_g_reg_bi_bu_bmy_bry_b_g",
                                     "validation_final_model"), 
@@ -1125,8 +1224,3 @@ final_table <- data.frame(model = c("mu",
   knitr::kable()
 
 final_table
-
-
-
-
-# rm(list = ls())
