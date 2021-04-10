@@ -311,6 +311,7 @@ edx %>%
 edx %>% 
   group_by(userId) %>% 
   summarise(ratings = n()) %>% 
+  arrange(desc(ratings)) %>%
   tail(n = 15) %>% 
   knitr::kable()
 
@@ -817,17 +818,17 @@ edx_reg_movie_user_myear_ryear_effect_rmse
 # __0.8562849 #####
 
 # ___________________________________########
-##### EXPLORING GENDER EFFECT ######
+##### EXPLORING GENRE EFFECT ######
 # ___________________________________########
 
 # In order to use all the data provided in the data set, we will explore the
-# gender effect. At this point, we are not sure if this approach will introduce
+# genre effect. At this point, we are not sure if this approach will introduce
 # noise to the model or, on the contrary, it will improve the rmse.
 
-# To add gender effect, we will separate genders by row (this change add more)
+# To add genre effect, we will separate geres by row (this change add more)
 # rows to the data sets.
 
-# Separation of gender by rows
+# Separation of genres by rows
 # Each combination of userId and movieId will now have as many rows as 
 # genres the movie has.
 
@@ -836,7 +837,43 @@ edx_g <- edx %>% separate_rows(genres, sep = "\\|") # It takes some time!
 train_edx_g <- train_edx %>% separate_rows(genres, sep = "\\|")
 test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
 
+# Revision 
+
 head(edx_g) %>% knitr::kable()
+
+# Only 1 film has no genres listed
+edx_g %>% filter(genres == "(no genres listed)")
+
+# Average Rating by Genres ######
+avg_genres <- edx_g %>% 
+  group_by(genres) %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  summarise(avg_rating = mean(rating)) %>% 
+  arrange(desc(avg_rating))
+
+knitr::kable(avg_genres)
+
+# Number of Ratings by Genres #####
+ratings_genres <-  edx_g %>% 
+  group_by(genres) %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  summarise(ratings = n()) %>% 
+  arrange(desc(ratings))
+  
+knitr::kable(ratings_genres)
+
+
+# Relation between number of ratings and average rating by gender #####
+genres_table <- avg_genres %>% 
+  left_join(ratings_genres, by = 'genres') 
+
+knitr::kable(genres_table)
+
+genres_table %>% 
+  ggplot(aes(ratings, avg_rating, color = genres, size = avg_rating)) +
+  geom_point() +
+  geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02)
+  
 
 edx_g %>% 
   group_by(genres) %>% 
@@ -844,10 +881,10 @@ edx_g %>%
   geom_boxplot() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-edx_g %>% # NOT RUN! Make test before
+edx_g %>% # 
   group_by(genres) %>% 
-  mutate(avg_rating = mean(rating)) %>% 
-  knitr::kable()
+  filter(!genres == "(no genres listed)") %>% 
+  summarise(mean(rating))
 
 
 edx_g %>% 
@@ -868,6 +905,10 @@ user_59269 %>%
   ggplot(aes(genres, avgs_rating)) +
   geom_point() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# ___________________________________########
+##### ADDING GENRE EFFECT: b_g  ######
+# ___________________________________########
 
 # Regularization #########
 # In this case we directly apply regularization
