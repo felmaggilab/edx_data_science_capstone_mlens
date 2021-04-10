@@ -739,10 +739,13 @@ test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
 
 lambdas <- seq(0, 10, 0.25)
 
-# Lambda best-tune to Movie +  User + Year Effects Regularization #####
+# Lambda best-tune to Movie + User + Year + Gender Effects Regularization #####
 # Here we don't use the test set at all, only the train set.
-# This process takes some time. Run it only if you want to prove that the code
-# Works
+
+# _______________________________________
+# NOTE: This process takes a lot of TIME! Run it only if you want to be sure 
+# that the code works: Lambda best tune is 0.5
+# ________________________________________
 
 rmses_g <- sapply(lambdas, function(l){
   
@@ -790,6 +793,9 @@ rmses_g <- sapply(lambdas, function(l){
     mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) %>%
     .$pred
   
+  # Here he change the previous code: final preds are the mean of all preds
+  # related to every movieId and userId combination
+  
   return(RMSE(predicted_ratings_g, train_edx_g$rating))
 })
 
@@ -804,6 +810,10 @@ min(rmses_g)
 
 # Predictions with best tune lambda #######
 # Here we make predictions over the test set, using best tune
+
+# _______________________________________
+# NOTE: This code could be directly applied using lambda = 0.5
+# ________________________________________
 
 mu <- mean(train_edx_g$rating) 
 # mu <- mean(train_edx$rating)
