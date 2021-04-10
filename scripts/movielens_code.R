@@ -158,8 +158,16 @@ edx_little <- edx_little %>%
 
 # Review of final results
 edx_little
+class(edx_little)
 
-# Applying changes to entire edx data frame
+# ___________________________________########
+# DEALING WITH GENRES ####
+# ___________________________________########
+
+edx_little %>% separate_rows(genres, sep = "\\|")
+
+
+# Applying changes to entire edx data frame (except genres)
 # ______________________________________
 
 # Adding rating_date and rating_year ######
@@ -608,7 +616,7 @@ lambda
 # 0.5
 
 min(rmses)
-0.8558851
+# 0.8558851
 
 # Predictions with best tune lambda #######
 # Here we make predictions over the test set, using best tune
@@ -669,7 +677,7 @@ data.frame("mu" = naive_rmse,
 
 
 # ___________________________________########
-##### APPLYING THE FINAL MODEL OVER ENTIRE EDX SET ######
+##### APPLYING THE MODEL OVER ENTIRE EDX SET ######
 # ___________________________________########
 
 # Here we use the lambdas that we got in the previous step, over the
@@ -716,6 +724,162 @@ edx_reg_movie_user_myear_ryear_effect_rmse <- RMSE(edx_reg_movie_user_myear_ryea
                                                edx$rating)
 edx_reg_movie_user_myear_ryear_effect_rmse
 # __0.8562849 #####
+
+# ___________________________________########
+##### EXPLORING GENDER EFFECT ######
+# ___________________________________########
+
+edx_g <- edx %>% separate_rows(genres, sep = "\\|") # It takes some time!
+
+train_edx_g <- train_edx %>% separate_rows(genres, sep = "\\|")
+test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
+
+
+# Regularization #########
+
+lambdas <- seq(0, 10, 0.25)
+
+# Lambda best-tune to Movie +  User + Year Effects Regularization #####
+# Here we don't use the test set at all, only the train set.
+# This process takes some time. Run it only if you want to prove that the code
+# Works
+
+rmses_g <- sapply(lambdas, function(l){
+  
+  mu <- mean(train_edx_g$rating) 
+  # mu <- mean(train_edx$rating)
+  
+  b_i <- train_edx_g %>%
+    group_by(movieId) %>%
+    summarize(b_i = sum(rating - mu)/(n()+l))
+  
+  b_u <- train_edx_g %>% 
+    left_join(b_i, by="movieId") %>%
+    group_by(userId) %>%
+    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+  
+  b_my <- train_edx_g %>% 
+    left_join(b_i, by = 'movieId') %>% 
+    left_join(b_u, by = 'userId') %>% 
+    group_by(movie_year) %>% 
+    summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+l))
+  
+  b_ry <- train_edx_g %>% 
+    left_join(b_i, by = 'movieId') %>% 
+    left_join(b_u, by = 'userId') %>% 
+    left_join(b_my, by = 'movie_year') %>% 
+    group_by(rating_year) %>% 
+    summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+l))
+  
+  b_g <- train_edx_g %>% 
+    left_join(b_i, by = 'movieId') %>% 
+    left_join(b_u, by = 'userId') %>% 
+    left_join(b_my, by = 'movie_year') %>% 
+    left_join(b_ry, by = 'rating_year') %>% 
+    group_by(genres) %>% 
+    summarise(b_g = sum(rating - b_i - b_u - b_my - b_ry - mu)/(n()+l))
+  
+  predicted_ratings_g <- 
+    train_edx_g %>% 
+    left_join(b_i, by = "movieId") %>%
+    left_join(b_u, by = "userId") %>%
+    left_join(b_my, by = 'movie_year') %>%
+    left_join(b_ry, by = 'rating_year') %>% 
+    left_join(b_g, by = 'genres') %>% 
+    group_by(userId, movieId) %>% 
+    mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) %>%
+    .$pred
+  
+  return(RMSE(predicted_ratings_g, train_edx_g$rating))
+})
+
+qplot(lambdas, rmses_g)  
+
+lambda <- lambdas[which.min(rmses)]
+lambda
+# 0.5
+
+min(rmses_g)
+# 0.8558851
+
+# Predictions with best tune lambda #######
+# Here we make predictions over the test set, using best tune
+
+mu <- mean(train_edx_g$rating) 
+# mu <- mean(train_edx$rating)
+
+b_i <- train_edx_g %>%
+  group_by(movieId) %>%
+  summarize(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- train_edx_g %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+b_my <- train_edx_g %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  group_by(movie_year) %>% 
+  summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
+
+b_ry <- train_edx_g %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  left_join(b_my, by = 'movie_year') %>% 
+  group_by(rating_year) %>% 
+  summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+lambda))
+
+b_g <- train_edx_g %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  left_join(b_my, by = 'movie_year') %>% 
+  left_join(b_ry, by = 'rating_year') %>% 
+  group_by(genres) %>% 
+  summarise(b_g = sum(rating - b_i - b_u - b_my - b_ry - mu)/(n()+lambda))
+
+reg_movie_user_myear_ryear_effect_pred_g <- 
+  test_edx_g %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  left_join(b_g, by = 'genres') %>% 
+  group_by(userId, movieId) %>% 
+  mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) %>%
+  .$pred
+
+str(reg_movie_user_myear_ryear_effect_pred_g)
+
+# Regularized Movie + User + Movie Year + Rating Year + Gender #####
+
+reg_movie_user_myear_ryear_effect_rmse_g <- RMSE(reg_movie_user_myear_ryear_effect_pred_g, 
+                                               test_edx_g$rating)
+reg_movie_user_myear_ryear_effect_rmse_g
+#__0.864636 orig #####
+#__0.8631034 mu orig #####
+#__0.8631031 mu g #####
+#__0.8630654 mean pred g ######
+
+unique(revision_preds_g$movieId)
+
+revision_preds_g <- 
+  test_edx_g %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  left_join(b_g, by = 'genres') %>% 
+  group_by(userId, movieId) %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry + b_g) 
+
+
+%>%
+  .$pred
+
+revision_preds_g %>% filter(movieId == 1092)
+revision_preds_g %>% filter(userId == 798)
+
 
 # ___________________________________########
 ##### APPLYING THE FINAL MODEL OVER VALIDATION SET ######
