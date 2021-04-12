@@ -31,6 +31,8 @@ if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.
 if(!require(recommenderlab)) install.packages("recommenderlab", repos = "http://cran.us.r-project.org")
 if(!require(lubridate)) install.packages("lubridate", repos = "http://cran.us.r-project.org")
 if(!require(stringr)) install.packages("stringr", repos = "http://cran.us.r-project.org")
+if(!require(ggalt)) install.packages("ggalt", repos = "http://cran.us.r-project.org")
+if(!require(ggcorrplot)) install.packages("ggcorrplot", repos = "http://cran.us.r-project.org")
 
 library(tidyverse)
 library(caret)
@@ -39,6 +41,10 @@ library(recommenderlab)
 library(dplyr)
 library(lubridate)
 library(stringr)
+library(gridExtra)
+library(ggalt)
+library(scales)
+library(ggcorrplot)
 
 # MovieLens 10M dataset:
 # https://grouplens.org/datasets/movielens/10m/
@@ -285,7 +291,7 @@ edx %>% arrange(movie_year)
 edx %>% arrange(rating_year)
 # Ratings from 1995 to 2008
 
-# Number of ratings by movie
+# Top 15 rated movies  #####
 edx %>% 
   group_by(title) %>% 
   summarise(ratings = n()) %>% 
@@ -300,7 +306,7 @@ edx %>%
   tail(15) %>% 
   knitr::kable()
 
-# Number of ratings by user
+# Top 15 active users ##### 
 edx %>% 
   group_by(userId) %>% 
   summarise(ratings = n()) %>% 
@@ -859,7 +865,7 @@ ratings_genres <-  edx_g %>%
   filter(!genres == "(no genres listed)") %>% 
   summarise(ratings = n()) %>% 
   arrange(desc(ratings))
-  
+
 knitr::kable(ratings_genres)
 
 
@@ -869,42 +875,77 @@ genres_table <- avg_genres %>%
 
 knitr::kable(genres_table)
 
+genres_selected_top <- genres_table %>% 
+  filter(genres %in% c("Film-Noir", "Documentary", "War"))
+
+genres_selected_bottom <- genres_table %>% 
+  filter(genres %in% c("Horror", "Children", "Sci-Fi", "Children "))
+
 genres_table %>% 
-  ggplot(aes(ratings, avg_rating, color = genres, size = avg_rating)) +
+  ggplot(aes(ratings, avg_rating, color = genres)) +
   geom_point() +
-  geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02)
-  
+  geom_encircle(aes(x = ratings, y = avg_rating), 
+                data = genres_selected_top, 
+                color="red", 
+                size=2, 
+                expand=0.04) +
+  geom_encircle(aes(x = ratings, y = avg_rating), 
+                data = genres_selected_bottom, 
+                color="red", 
+                size=2, 
+                expand=0.07) +
+  geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02)+
+  labs(title = "Number of ratings versus average rating by gender")
+
+# Movie year versus genders rating counts ######
 
 edx_g %>% 
-  group_by(genres) %>% 
+  filter(!genres == "(no genres listed)") %>%
+  group_by(movie_year, genres) %>% 
+  summarise(genres_r_count = n()) %>% 
+  ggplot(aes(movie_year, genres_r_count , color = genres)) +
+  geom_point() +
+  labs(title = "Movie year versus genders rating counts")
+
+# Movie year versus genders rating counts (scale y = log2) ######
+edx_g %>% 
+  filter(!genres == "(no genres listed)") %>%
+  group_by(movie_year, genres) %>% 
+  summarise(genres_r_count = n()) %>% 
+  ggplot(aes(movie_year, genres_r_count , color = genres)) +
+  geom_point() +
+  scale_y_continuous(trans = "log2") +
+  labs(title = "Movie year versus genders rating counts")
+
+
+# Distributions of Ratings by Genres: NOT RUN! ######
+edx_g %>% 
+  filter(!genres == "(no genres listed)") %>% 
   ggplot(aes(genres, rating)) +
   geom_boxplot() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Distributions of Ratings by Genres")
 
-edx_g %>% # 
-  group_by(genres) %>% 
-  filter(!genres == "(no genres listed)") %>% 
-  summarise(mean(rating))
-
-
+# Selecting and Active User ####### 
 edx_g %>% 
   group_by(userId) %>% 
   mutate(count = n()) %>% 
   arrange(desc(count))
 
 user_59269 <- edx_g %>% filter(userId == 59269)
+# 6616 rated movies
 
-length((unique(user_59269 %>% pull(movieId))))
-# 6616 películas rateadas
-
-
+# Distributions of Ratings by Genres: User 59269 ######
 user_59269 %>% 
-  filter(!is.na(genres)) %>% 
-  group_by(genres) %>% 
-  mutate(avgs_rating = mean(rating))  %>%
-  ggplot(aes(genres, avgs_rating)) +
-  geom_point() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  filter(!genres == "(no genres listed)") %>% 
+  ggplot(aes(genres, rating)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Distributions of Ratings by Genres")
+
+
 
 # ___________________________________########
 ##### ADDING GENRE EFFECT: b_g  ######
@@ -1249,8 +1290,6 @@ final_table <- data.frame(model = c("mu",
                                     "reg_bi_bu_bmy", 
                                     "reg_bi_bu_bmy_bry", 
                                     "reg_bi_bu_bmy_bry_b_g",
-                                    "edx_reg_bi_bu_bmy_bry",
-                                    "edx_g_reg_bi_bu_bmy_bry_b_g",
                                     "validation_final_model"), 
                           rmse = c(naive_rmse, 
                                    movie_effect_rmse,  
@@ -1259,8 +1298,6 @@ final_table <- data.frame(model = c("mu",
                                    reg_movie_user_effect_myear_rmse,
                                    reg_movie_user_myear_ryear_effect_rmse,
                                    reg_movie_user_myear_ryear_effect_gender_rmse,
-                                   edx_reg_movie_user_myear_ryear_effect_rmse,
-                                   edx_g_reg_movie_user_myear_ryear_effect_gender_rmse,
                                    validation_preds_rmse)) %>% 
   knitr::kable()
 
