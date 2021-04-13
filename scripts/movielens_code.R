@@ -250,6 +250,17 @@ cbPalette <- c("gray" = "#999999",
 dim(edx) # dim edx######
 # 9000055       9
 
+# Matrix visualization #######
+
+matrix_edx <- edx[1:1000000,] %>% 
+  select(userId, movieId, rating)
+
+matrix_edx <- matrix_edx %>% as("realRatingMatrix")
+
+matrix_edx[1:1000,1:1000] %>% getRatingMatrix
+
+image(matrix_edx[1:50,1:50])
+
 length(unique(edx$movieId)) # Number of movies #####
 # 10677
 
@@ -1445,9 +1456,6 @@ cor(imax$pred, imax$rating)
 validation_preds_rev %>%
   ggplot(aes(rating, pred, color = genres)) +
   geom_boxplot()
-
-
-2+2
 
 
 
