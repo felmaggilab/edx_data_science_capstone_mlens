@@ -19,8 +19,6 @@
 
 #_________________
 
-# Create edx set, validation set (final hold-out test set) 
-
 # Note: this process could take a couple of minutes
 
 # Packages and libraries #######
@@ -84,7 +82,7 @@ head(movies)
 
 movielens <- left_join(ratings, movies, by = "movieId")
 
-head(movielens)
+head(movielens) %>% knitr::kable()
 
 
 # Creation of test and validation sets ######
@@ -168,13 +166,20 @@ class(edx_little)
 # DEALING WITH GENRES ####
 # ___________________________________########
 
-edx_little %>% separate_rows(genres, sep = "\\|")
+edx_little %>% 
+  as_tibble()
+
+edx_little_g  <- edx_little %>% 
+  separate_rows(genres, sep = "\\|")
+
+edx_little_g %>% 
+  as_tibble()
 
 
 # Applying changes to entire edx data frame (except genres)
 # ______________________________________
 
-# Adding rating_date and rating_year ######
+# Adding rating_date and rating_year #####
 edx <- edx %>% mutate(rating_date = as_datetime(timestamp), 
                       rating_year = as.integer(year(rating_date)))
 
@@ -191,7 +196,11 @@ edx <- edx %>%
   mutate(movie_year = as.integer(movie_years_temp))
 
 # Review of final results
-edx[ind]
+edx %>% 
+  select(userId, movieId, rating, title, rating_year, movie_year) %>% 
+  head() %>% 
+  filter(movieId == 122 | movieId == 185 | movieId == 292 | movieId == 355) %>% 
+  as_tibble()
 
 # ___________________________________########
 #### TEST SET AND TRAIN SET ########
@@ -247,25 +256,44 @@ cbPalette <- c("gray" = "#999999",
                "red" = "#D55E00", 
                "pink" = "#CC79A7")
 
-dim(edx) # dim edx######
+# dim edx######
+
+dim(edx) 
 # 9000055       9
 
-# Matrix visualization #######
+# min and max ratings ######
+
+min(edx$rating)
+max(edx$rating)
+
+# Matrix creation #######
 
 matrix_edx <- edx[1:1000000,] %>% 
   select(userId, movieId, rating)
 
-matrix_edx <- matrix_edx %>% as("realRatingMatrix")
+rec_matrix_edx <- matrix_edx %>% as("realRatingMatrix")
+class(rec_matrix_edx)
 
-matrix_edx[1:1000,1:1000] %>% getRatingMatrix
+# Matrix visualization #######
 
+rec_matrix_edx[1:50,1:50] %>% getRatingMatrix
+
+image(rec_matrix_edx[1:50,1:50])
+
+matrix_edx <- rec_matrix_edx %>%
+  as("matrix")
 image(matrix_edx[1:50,1:50])
 
-length(unique(edx$movieId)) # Number of movies #####
+# Number of movies #####
+
+length(unique(edx$movieId)) 
 # 10677
 
-length(unique(edx$userId)) # Number of users #####
+# Number of users #####
+
+length(unique(edx$userId)) 
 # 69878
+
 
 # Ratings frecuency 
 edx %>% ggplot(aes(rating)) +
