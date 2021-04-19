@@ -100,14 +100,9 @@ validation <- temp %>%
   semi_join(edx, by = "movieId") %>%
   semi_join(edx, by = "userId")
 
-str(validation$rating)
-
 # Add rows removed from validation set back into edx set
 removed <- anti_join(temp, validation)
 edx <- rbind(edx, removed)
-
-head(edx)
-class(edx)
 
 # ___________________________________########
 # ADDING NEW COLUMNS #######
@@ -141,7 +136,6 @@ edx_little
 # Adding rating_date and rating_year
 edx_little <- edx_little %>% mutate(rating_date = as_datetime(timestamp), 
                                     rating_year = as.integer(year(rating_date)))
-class(edx_little$rating_year)
 
 # Creating the new column "movie_year", extracting year from "title"
 # We use the "string" package, so if necessary you need to download it
@@ -160,7 +154,6 @@ edx_little <- edx_little %>%
 
 # Review of final results
 edx_little
-class(edx_little)
 
 # ___________________________________########
 # DEALING WITH GENRES ####
@@ -256,33 +249,10 @@ cbPalette <- c("gray" = "#999999",
                "red" = "#D55E00", 
                "pink" = "#CC79A7")
 
-# dim edx######
+# Dim edx######
 
-dim(edx) 
+dim(edx)
 # 9000055       9
-
-# min and max ratings ######
-
-min(edx$rating)
-max(edx$rating)
-
-# Matrix creation #######
-
-matrix_edx <- edx[1:1000000,] %>% 
-  select(userId, movieId, rating)
-
-rec_matrix_edx <- matrix_edx %>% as("realRatingMatrix")
-class(rec_matrix_edx)
-
-# Matrix visualization #######
-
-rec_matrix_edx[1:50,1:50] %>% getRatingMatrix
-
-image(rec_matrix_edx[1:50,1:50])
-
-matrix_edx <- rec_matrix_edx %>%
-  as("matrix")
-image(matrix_edx[1:50,1:50])
 
 # Number of movies #####
 
@@ -294,17 +264,41 @@ length(unique(edx$movieId))
 length(unique(edx$userId)) 
 # 69878
 
+# min and max ratings ######
 
-# Ratings frecuency 
+min(edx$rating)
+max(edx$rating)
+
+# Matrix creation #######
+
+head(edx)
+
+edx_recom <- edx %>% 
+  select(userId, movieId, rating)
+
+head(edx_recom)
+
+edx_ui <- edx_recom %>% as("realRatingMatrix")
+edx_ui[1:100,1:100] %>% getRatingMatrix
+
+# Matrix visualization #######
+
+image(edx_ui[1:50,1:50])
+
+matrix_edx_ui <- edx_ui %>%
+  as("matrix")
+image(matrix_edx_ui[1:50,1:50])
+
+# Ratings frecuency  ######
 edx %>% ggplot(aes(rating)) +
   geom_density(fill = "#0072B2") +
   labs(title = "Rating frecuency")
 
-avg_rating <- mean(edx$rating) # avg rating ######
+avg_rating <- mean(edx$rating) # Avg rating ######
 avg_rating
 # 3.512465 
 
-sd_rating <- sd(edx$rating) # sd rating ######
+sd_rating <- sd(edx$rating) # SD rating ######
 sd_rating
 # 1.060331
 
@@ -387,15 +381,109 @@ edx %>%
 # be very pronounced.
 
 # ___________________________________########
+##### RECOMMENDERLAB: dismissed ######
+# ___________________________________########
+
+# Creating Matrix #####
+
+head(edx)
+
+edx_recom <- edx %>% 
+  select(userId, movieId, rating)
+
+head(edx_recom)
+
+edx_ui <- edx_recom %>% as("realRatingMatrix")
+edx_ui[1:100,1:100] %>% getRatingMatrix
+
+image(edx_ui[1:50,1:50])
+
+# Cleaning the Matrix: At least 10 ratings #####
+
+# Min ratings by user
+rowCounts(edx_ui) %>% as("matrix") %>% min
+
+# Min ratings by movie
+colCounts(edx_ui) %>% as("matrix") %>% min
+
+edx_ui <- edx_ui[,colCounts(edx_ui)>= 10]
+
+
+# NOT RUN !!!!! it takes a lot of time!
+# Eventually these attempts were dismissed
+# ______________________________________
+
+# Source: https://rpubs.com/elias_alegria/intro_recommenderlab 
+
+# Evaluation shceme ####
+
+# eval_scheme <- evaluationScheme(edx_ui, method = "split", train = 0.9, given = 5)
+
+# Train and Test Sets ######
+
+# train <- eval_scheme %>% getData("train")
+# known <- eval_scheme %>% getData("known")
+# unknown <- eval_scheme %>% getData("unknown")
+
+# Trainning Models ######
+
+# ubcf_model <- Recommender(train, "UBCF")
+# ibcf_model <- Recommender(train, "IBCF")
+# svd_model <- Recommender(train, "SVD")
+
+# Predictions #####
+
+# ubcf_pred <- predict(ubcf_model, known, type = "ratings")
+# ibcf_pred <- predict(ibcf_model, known, type = "ratings")
+# svd_pred <- predict(svd_model, known, type = "ratings")
+
+# Error ######
+
+# error_calc <- rbind("ubcf" = calcPredictionAccuracy(ubcf_pred, unknown),
+              # "ibcf" = calcPredictionAccuracy(ibcf_pred, unknown),
+              # "svd" = calcPredictionAccuracy(svd_pred, unknown))
+
+# error_calc
+
+# Using a little versión of edx #####
+# Run only if you want test the package.
+
+# set.seed(1970, sample.kind="Rounding")
+# edx_ui_little <- edx_ui[sample(1:nrow(edx_ui), size=10000),]
+
+# eval_scheme <- evaluationScheme(edx_ui_little, method = "split", train = 0.9, given = 5)
+
+# train <- eval_scheme %>% getData("train")
+# known <- eval_scheme %>% getData("known")
+# eval_scheme %>% getData("unknown")
+
+# ubcf_model <- Recommender(train, "UBCF")
+# ibcf_model <- Recommender(train, "IBCF") # it takes time even with sample !
+# scv_model <- Recommender(train, "SVD")
+
+# ubcf_pred <- predict(ubcf_model, known, type = "ratings") # it takes time even with sample !
+# ibcf_pred <- predict(ibcf_model, known, type = "ratings")
+# svd_pred <- predict(svd_model, known, type = "ratings")
+
+# error_calc <- rbind("ubcf" = calcPredictionAccuracy(ubcf_pred, unknown),
+                    # "ibcf" = calcPredictionAccuracy(ibcf_pred, unknown),
+                    # "svd" = calcPredictionAccuracy(svd_pred, unknown))
+
+# error_calc
+
+# This approach is dismissed
+
+# ___________________________________########
 ##### TESTING BASIC MODELS ######
 # ___________________________________########
-# We will start testing very basic models (included on bibliography of the 
+
+# We will start with very basic models (included on bibliography of the 
 # course, just for basic testing process, and see how rmse improves after each
-# model change)
+# model improvement)
 
-# _______No regularization_________ #####
+# No regularization  #####
 
-# Naive: mu ######
+# __Naive: mu ######
 
 naive_pred <- mean(train_edx$rating)
 
@@ -405,7 +493,7 @@ naive_rmse <- RMSE(naive_pred, test_edx$rating)
 naive_rmse
 #__1.060167 #####
 
-# Movie Effects: b_i ######
+# __Movie Effects: b_i ######
 
 mu <- mean(train_edx$rating)
 
@@ -432,7 +520,7 @@ movie_effect_rmse <- RMSE(test_edx$rating, movie_effect_pred)
 movie_effect_rmse
 # __0.9432171  #####
 
-# Movie User Effects: b_i + b_u #######
+# __Movie User Effects: b_i + b_u #######
 
 user_avgs <- train_edx %>% 
   left_join(movie_avgs, by = "movieId") %>% 
@@ -452,14 +540,14 @@ movie_user_effect_rmse <- RMSE(test_edx$rating, movie_user_effect_pred)
 movie_user_effect_rmse
 # __0.8651897 #####
 
-# _______Regularization_________######
+# Regularization ######
 
 # Now: we will apply regularization to see if we get some improvements in our 
 # RMSE
 
 lambdas <- seq(0, 10, 0.25)
 
-# Lambda best-tune to Move Effects and User Efects Regularization #####
+# __Lambda best-tune to Move Effects and User Efects Regularization #####
 # Here we don't use the test set at all, only the train set.
 
 rmses <- sapply(lambdas, function(l){
@@ -494,7 +582,7 @@ lambda
 min(rmses)
 # __0.8562963 #######
 
-# Predictions with best tune lambda #######
+# __Predictions with best tune lambda #######
 # Here we make predictions over the test set, using best tune
 
 mu <- mean(train_edx$rating)
@@ -517,7 +605,7 @@ reg_movie_user_effect_pred <-
 
 str(reg_movie_user_effect_pred)
 
-# Regularized Movie + User Effects #####
+# __Regularized Movie + User Effects #####
 
 reg_movie_user_effect_rmse <- RMSE(reg_movie_user_effect_pred, test_edx$rating)
 reg_movie_user_effect_rmse
@@ -1019,22 +1107,6 @@ sample_edx_g %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(title = "Distributions of Ratings by Genres. Sample")
 
-avg_genres_2 <- edx_g %>% 
-  group_by(genres) %>% 
-  summarise(avg_rating = mean(rating), sd = sd(rating)) %>% 
-  arrange(desc(avg_rating))
-
-avg_genres_sample <- sample_edx_g %>% 
-  group_by(genres) %>% 
-  summarise(avg_rating = mean(rating), sd = sd(rating)) %>% 
-  arrange(desc(avg_rating))
-
-edx_sample_comp <- avg_genres_2 %>% 
-  left_join(avg_genres_sample, by = 'genres') %>% 
-  filter(!genres == "(no genres listed)")
-
-edx_sample_comp
-
 # Distribution avg rating by genres ######
 
 # Order by avg_rating
@@ -1217,6 +1289,9 @@ reg_movie_user_myear_ryear_effect_gender_rmse <-
   RMSE(reg_movie_user_myear_ryear_gender_effect_pred, 
        test_edx_g$rating)
 
+length(reg_movie_user_myear_ryear_gender_effect_pred)
+length(test_edx_g$rating)
+
 reg_movie_user_myear_ryear_effect_gender_rmse
 #__0.864636 orig model no gender #####
 #__0.8631034 gender and mu orig #####
@@ -1249,7 +1324,7 @@ revision_preds_g %>% filter(userId == 325) %>%
 # So, before to make preds, we group by userId and movieId, and take the mean
 # of the preds:
 
-revision_preds_g <- 
+revision_preds_g_mean <- 
   test_edx_g %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
@@ -1259,7 +1334,7 @@ revision_preds_g <-
   group_by(userId, movieId) %>% # <- Change
   mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) # <- Change (mean)
 
-revision_preds_g %>% filter(userId == 59269 & genres == "Film-Noir") %>% 
+revision_preds_g_mean %>% filter(userId == 325) %>% 
   select(userId, movieId, title, genres, rating, pred) %>%
   knitr::kable()
 
@@ -1413,9 +1488,26 @@ validation_preds_rev %>% filter(userId == 621) %>%
   geom_point()
 
 validation_preds_rev %>% 
+  mutate(rating = as.factor(rating)) %>% 
+  mutate(rating = factor(rating, 
+                         levels = levels(rating)[c(9,8,10,3,7,2,4,6,5,1)])) %>% 
   select(userId, movieId, title, genres, rating, pred) %>%
   ggplot(aes(rating, pred)) +
-  geom_point()
+  geom_boxplot() +
+  geom_point() +
+  geom_jitter(width = 0.1, alpha = 0.5)
+
+validation_preds_rev %>% 
+  mutate(rating = as.factor(rating)) %>% 
+  mutate(rating = factor(rating, 
+                         levels = levels(rating)[c(9,8,10,3,7,2,4,6,5,1)])) %>% 
+  ggplot(aes(pred, fill = pred)) +
+  geom_density()
+
+
+
+class(validation_preds_rev$rating)
+
 
 # Final Table ######
 
