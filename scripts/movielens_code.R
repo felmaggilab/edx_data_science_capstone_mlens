@@ -31,6 +31,7 @@ if(!require(lubridate)) install.packages("lubridate", repos = "http://cran.us.r-
 if(!require(stringr)) install.packages("stringr", repos = "http://cran.us.r-project.org")
 if(!require(ggalt)) install.packages("ggalt", repos = "http://cran.us.r-project.org")
 if(!require(ggcorrplot)) install.packages("ggcorrplot", repos = "http://cran.us.r-project.org")
+if(!require(fastDummies)) install.packages("fastDummies", repos = "http://cran.us.r-project.org")
 
 library(tidyverse)
 library(caret)
@@ -43,6 +44,7 @@ library(gridExtra)
 library(ggalt)
 library(scales)
 library(ggcorrplot)
+library(fastDummies)
 
 # MovieLens 10M dataset:
 # https://grouplens.org/datasets/movielens/10m/
@@ -167,6 +169,8 @@ edx_little_g  <- edx_little %>%
 
 edx_little_g %>% 
   as_tibble()
+
+
 
 
 # Applying changes to entire edx data frame (except genres)
@@ -950,18 +954,20 @@ edx_reg_movie_user_myear_ryear_effect_rmse <- RMSE(edx_reg_movie_user_myear_ryea
 edx_reg_movie_user_myear_ryear_effect_rmse
 # __0.8562849 #####
 
+
 # ___________________________________########
-##### EXPLORING GENRE EFFECT ######
+##### EXPLORING GENRE EFFECT  ######
+##### APPROACH 1 ######
 # ___________________________________########
 
 # In order to use all the data provided in the data set, we will explore the
 # genre effect. At this point, we are not sure if this approach will introduce
-# noise to the model or, on the contrary, it will improve the rmse.
+# noise to the model or, on the contrary, it will improve the RMSE
 
 # To add genre effect, we will separate geres by row (this change add more)
-# rows to the data sets.
+# rows to the data sets (approach 1).
 
-# Separation of genres by rows
+# Separation of genres by rows  #######
 # Each combination of userId and movieId will now have as many rows as 
 # genres the movie has.
 
@@ -1141,7 +1147,6 @@ edx_g %>%
   facet_grid(genres ~ .)
 
 # __Grouped by user #####
-
 edx_g %>% 
   filter(!genres == "(no genres listed)") %>%
   group_by(userId) %>% 
@@ -1152,7 +1157,8 @@ edx_g %>%
   facet_grid(genres ~ .)
 
 # ___________________________________########
-##### ADDING GENRE EFFECT: b_g  ######
+##### ADDING GENRE EFFECT  ######
+###### APPROACH 1  ######
 # ___________________________________########
 
 # Regularization #########
@@ -1269,7 +1275,7 @@ b_g <- train_edx_g %>%
   group_by(genres) %>% 
   summarise(b_g = sum(rating - b_i - b_u - b_my - b_ry - mu)/(n()+lambda))
 
-reg_movie_user_myear_ryear_gender_effect_pred <- 
+reg_movie_user_myear_ryear_genre_effect_pred <- 
   test_edx_g %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
@@ -1283,20 +1289,20 @@ reg_movie_user_myear_ryear_gender_effect_pred <-
 # Here he change the previous code: final preds are the mean of all preds
 # related to every movieId and userId combination
 
-# Regularized Movie + User + Movie Year + Rating Year + Gender #####
+# Regularized Movie + User + Movie Year + Rating Year + Genre #####
 
-reg_movie_user_myear_ryear_effect_gender_rmse <- 
-  RMSE(reg_movie_user_myear_ryear_gender_effect_pred, 
+reg_movie_user_myear_ryear_effect_genre_rmse <- 
+  RMSE(reg_movie_user_myear_ryear_genre_effect_pred, 
        test_edx_g$rating)
 
-length(reg_movie_user_myear_ryear_gender_effect_pred)
+length(reg_movie_user_myear_ryear_genre_effect_pred)
 length(test_edx_g$rating)
 
-reg_movie_user_myear_ryear_effect_gender_rmse
-#__0.864636 orig model no gender #####
-#__0.8631034 gender and mu orig #####
-#__0.8631031 gender and mu g #####
-#__0.8630654 gender and mean pred ######
+reg_movie_user_myear_ryear_effect_genre_rmse
+#__0.864636 orig model no genre #####
+#__0.8631034 genre and mu orig #####
+#__0.8631031 genre and mu g #####
+#__0.8630654 genre and mean pred ######
 
 
 # Why we use the mean of preds for movieId - UserId comb?
@@ -1339,7 +1345,253 @@ revision_preds_g_mean %>% filter(userId == 325) %>%
   knitr::kable()
 
 # ___________________________________########
-##### APPLYING THE MODEL OVER ENTIRE EDX_G SET ######
+##### ADDING GENRE EFFECT ######
+###### APPROACH 2  ######
+# ___________________________________########
+
+# In this second approach, instead of separating the genders into rows, 
+# dummy variables are used to incorporate the genres into the model. 
+
+# sum(xui * BetaK)
+
+# In this case, no observations are added. The number of rows in the datasets #
+# is not altered. Instead, new columns are added (as many as genres). 
+# The values for each genre become 0 and 1. If a movie belongs to a specific 
+# genre, the value of the column for that genre will be 1 for that movie
+
+##### Adding dummy variables in train set #####
+
+# replacing "|" by "," ("|" is not interpreted by dummy_columns funtion)
+train_edx_genres <- train_edx %>% 
+  mutate(genres = str_replace_all(genres, '\\|', ','))
+
+# Creating dummy columns
+train_edx_genres <- dummy_columns(train_edx_genres, select_columns = c("genres"), 
+                                  split = ",",
+                                  remove_first_dummy = TRUE)
+
+# Replacing "-" by "_" in Fil-Noir and Sci-Fi 
+train_edx_genres <- train_edx_genres %>% rename(genres_Film_Noir = "genres_Film-Noir",
+                                                genres_Sci_Fi = "genres_Sci-Fi")
+
+dim(train_edx_genres)
+
+str(train_edx_genres)
+
+train_edx_genres %>% 
+  select(movieId, genres, genres_Action, genres_Adventure, genres_Sci_Fi) %>% 
+  head() %>% 
+  knitr::kable()
+
+##### Adding dummy variables in test set #####
+
+test_edx_genres <- test_edx %>% 
+  mutate(genres = str_replace_all(genres, '\\|', ','))
+
+test_edx_genres <- dummy_columns(test_edx_genres, select_columns = c("genres"), 
+                                 split = ",",
+                                 remove_first_dummy = TRUE)
+
+test_edx_genres <- test_edx_genres %>% rename(genres_Film_Noir = "genres_Film-Noir",
+                                              genres_Sci_Fi = "genres_Sci-Fi")
+
+dim(test_edx_genres)
+
+str(test_edx_genres)
+
+# Constructing the model #####
+
+# The idea is to calculate a weight (Beta) for each genre, and multiply that weight 
+# by 1 if the film belongs to that genre (by zero otherwise)
+
+#(Here we use lambda = 0.5 as best tune finded previously)
+
+mu_genres <- mean(train_edx_genres$rating) ##__avg rating #####
+
+b_i_genres <- train_edx_genres %>%
+  group_by(movieId) %>%
+  summarize(b_i_genres = sum(rating - mu_genres)/(n()+lambda)) # __b_i ####
+
+b_u_genres <- train_edx_genres %>% # __b_u ######
+  left_join(b_i_genres, by="movieId") %>%
+  group_by(userId) %>%
+  summarize(b_u_genres = sum(rating - b_i_genres - mu_genres)/(n()+lambda))
+
+# __Calculating Betas for every genre ####
+
+# The weight (Beta) of each genre is calculated as:
+# rating - regularized avg genre rating - b_i - b_u 
+
+Beta_Action <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId")%>%
+  summarise(Beta_Action = mean(rating - (sum(rating*genres_Action/(sum(genres_Action)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Adventure <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Adventure = mean(rating - (sum(rating*genres_Adventure/(sum(genres_Adventure)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Animation <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Animation = mean(rating - (sum(rating*genres_Animation/(sum(genres_Animation)+lambda))- b_i_genres - b_u_genres)))
+
+Beta_Children <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Children = mean(rating - (sum(rating*genres_Children/(sum(genres_Children)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Comedy <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Comedy = mean(rating - (sum(rating*genres_Comedy/(sum(genres_Comedy)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Fantasy  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Fantasy = mean(rating - (sum(rating*genres_Fantasy/(sum(genres_Fantasy)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_IMAX  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_IMAX = mean(rating - (sum(rating*genres_IMAX/(sum(genres_IMAX)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Sci_Fi  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Sci_Fi = mean(rating - (sum(rating*genres_Sci_Fi/(sum(genres_Sci_Fi)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Drama  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Drama = mean(rating - (sum(rating*genres_Drama/(sum(genres_Drama)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Horror <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Horror  = mean(rating - (sum(rating*genres_Horror/(sum(genres_Horror)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Mystery <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Mystery  = mean(rating - (sum(rating*genres_Mystery/(sum(genres_Mystery)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Romance  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Romance = mean(rating - (sum(rating*genres_Romance/(sum(genres_Romance)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Thriller <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Thriller = mean(rating - (sum(rating*genres_Thriller/(sum(genres_Thriller)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Crime  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Crime = mean(rating - (sum(rating*genres_Crime/(sum(genres_Crime)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_War  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_War = mean(rating - (sum(rating*genres_War/(sum(genres_War)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Western  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Western = mean(rating - (sum(rating*genres_Western/(sum(genres_Western)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Musical  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Musical = mean(rating - (sum(rating*genres_Musical/(sum(genres_Musical)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Documentary  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId")  %>%
+  summarise(Beta_Documentary = mean(rating - (sum(rating*genres_Documentary/(sum(genres_Documentary)+lambda)) - b_i_genres - b_u_genres)))
+
+Beta_Film_Noir  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Film_Noir = mean(rating - (sum(rating*genres_Film_Noir/(sum(genres_Film_Noir)+lambda)) - b_i_genres - b_u_genres)))
+
+# Calculating Sum(XuiK * BetaK), XuiK = 1 if genre = K
+b_g_genres <- train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  group_by(movieId) %>% 
+  summarise(b_g_genres = (genres_Action * as.numeric(Beta_Action)) +
+              (genres_Adventure * as.numeric(Beta_Adventure)) +
+              (genres_Children * as.numeric(Beta_Children)) +
+              (genres_Comedy * as.numeric(Beta_Comedy)) +
+              (genres_Fantasy * as.numeric(Beta_Fantasy)) +
+              (genres_IMAX * as.numeric(Beta_IMAX)) +
+              (genres_Sci_Fi * as.numeric(Beta_Sci_Fi)) +
+              (genres_Drama * as.numeric(Beta_Drama)) +
+              (genres_Horror * as.numeric(Beta_Horror)) + 
+              (genres_Mystery * as.numeric(Beta_Mystery)) +
+              (genres_Romance * as.numeric(Beta_Romance)) +
+              (genres_Thriller * as.numeric(Beta_Thriller)) +
+              (genres_Crime * as.numeric(Beta_Crime)) +
+              (genres_War * as.numeric(Beta_War)) +
+              (genres_Western * as.numeric(Beta_Western)) +
+              (genres_Musical * as.numeric(Beta_Musical)) +
+              (genres_Documentary * as.numeric(Beta_Documentary)) +
+              (genres_Film_Noir * as.numeric(Beta_Film_Noir))) %>% 
+  unique()
+
+train_predicted_ratings_genres <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>% 
+  left_join(b_g_genres, by = "movieId") %>%
+  mutate(mu_genres = mu_genres, pred = mu_genres + b_i_genres + b_u_genres - b_g_genres) %>%
+  .$pred
+
+train_genres_rmse <- RMSE(predicted_ratings_genres, train_edx_genres$rating)
+train_genres_rmse
+# 0.8789393
+
+# Predictions over the test set ####
+
+test_predicted_ratings_genres <- 
+  test_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>% 
+  left_join(b_g_genres, by = "movieId") %>%
+  mutate(mu_genres = mu_genres, pred = mu_genres + b_i_genres + b_u_genres - b_g_genres) %>%
+  .$pred
+
+test_genres_rmse <- RMSE(test_predicted_ratings_genres, test_edx_genres$rating)
+test_genres_rmse
+# 0.8874411 #####
+
+# In this case, when we add the genre to the model, we get worse preliminary 
+# results than those obtained only with the movie and user effects.
+
+# ___________________________________########
+##### APPLYING FINAL MODEL OVER ENTIRE EDX_G SET ######
 # ___________________________________########
 
 mu <- mean(edx_g$rating) #       <- rmse = 0.8534774
@@ -1375,7 +1627,7 @@ b_g <- edx_g %>%
   group_by(genres) %>% 
   summarise(b_g = sum(rating - b_i - b_u - b_my - b_ry - mu)/(n()+lambda))
 
-edx_g_reg_movie_user_myear_ryear_gender_effect_pred <- 
+edx_g_reg_movie_user_myear_ryear_genre_effect_pred <- 
   edx_g %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
@@ -1389,15 +1641,15 @@ edx_g_reg_movie_user_myear_ryear_gender_effect_pred <-
 # Here he change the previous code: final preds are the mean of all preds
 # related to every movieId and userId combination
 
-str(edx_g_reg_movie_user_myear_ryear_gender_effect_pred)
+str(edx_g_reg_movie_user_myear_ryear_genre_effect_pred)
 
 # Regularized Movie + User + Movie Year + Rating Year + Gender #####
 
-edx_g_reg_movie_user_myear_ryear_effect_gender_rmse <- 
-  RMSE(edx_g_reg_movie_user_myear_ryear_gender_effect_pred, 
+edx_g_reg_movie_user_myear_ryear_effect_genre_rmse <- 
+  RMSE(edx_g_reg_movie_user_myear_ryear_genre_effect_pred, 
        edx_g$rating)
 
-edx_g_reg_movie_user_myear_ryear_effect_gender_rmse
+edx_g_reg_movie_user_myear_ryear_effect_genre_rmse
 #__0.8534774########
 
 
@@ -1409,7 +1661,7 @@ edx_g_reg_movie_user_myear_ryear_effect_gender_rmse
 
 
 # ___________________________________########
-##### APPLYING THE FINAL MODEL OVER VALIDATION SET ######
+##### Cambiar por modelo sensillo APPLYING THE FINAL MODEL OVER VALIDATION SET  ######
 # ___________________________________########
 
 #Now, we apply the final model trained with edx set, over the validation set.
@@ -1530,6 +1782,26 @@ final_table <- data.frame(model = c("mu",
   knitr::kable()
 
 final_table
+
+
+#_____ Validation  model movie, user, movie year, rating year________#####
+
+
+validation_pred <- 
+  validation %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
+  .$pred
+
+# Regularized Movie + User + Movie Year + Rating Year #####
+
+edx_reg_movie_user_myear_ryear_effect_rmse_val <- RMSE(validation_pred, 
+                                                       validation$rating)
+edx_reg_movie_user_myear_ryear_effect_rmse_val
+# __0.8648047 #####
 
 # ___________________________________########
   ##### EXPLAINING THE MODEL ######
