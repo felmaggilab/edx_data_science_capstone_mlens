@@ -1,0 +1,479 @@
+---
+title: "Test"
+author: "Felipe Maggi"
+date: "14/4/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r packages, eval=FALSE, message=FALSE, include=FALSE}
+# Packages
+
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+if(!require(recommenderlab)) install.packages("recommenderlab", repos = "http://cran.us.r-project.org")
+if(!require(lubridate)) install.packages("lubridate", repos = "http://cran.us.r-project.org")
+if(!require(stringr)) install.packages("stringr", repos = "http://cran.us.r-project.org")
+if(!require(ggalt)) install.packages("ggalt", repos = "http://cran.us.r-project.org")
+if(!require(ggcorrplot)) install.packages("ggcorrplot", repos = "http://cran.us.r-project.org")
+if(!require(fastDummies)) install.packages("fastDummies", repos = "http://cran.us.r-project.org")
+```
+
+```{r libraries, eval=FALSE, message=FALSE, include=FALSE}
+# Libraries
+
+library(tidyverse)
+library(caret)
+library(data.table)
+library(recommenderlab)
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(gridExtra)
+library(ggalt)
+library(scales)
+library(ggcorrplot)
+library(fastDummies)
+```
+
+```{r data_download, eval=FALSE, message=FALSE, include=FALSE}
+# Data download #####
+
+dl <- tempfile()
+download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
+```
+
+```{r data_wrangling, eval=FALSE, message=FALSE, include=FALSE}
+# Data wrangling #####
+
+ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
+                 col.names = c("userId", "movieId", "rating", "timestamp"))
+
+movies <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
+colnames(movies) <- c("movieId", "title", "genres")
+
+# __if using R 3.6 or earlier: #####
+
+# movies <- as.data.frame(movies) %>% 
+# mutate(movieId = as.numeric(levels(movieId))[movieId],
+# title = as.character(title),
+# genres = as.character(genres))
+
+# __if using R 4.0 or later: #######
+
+movies <- as.data.frame(movies) %>% mutate(movieId = as.numeric(movieId),
+                                           title = as.character(title),
+                                           genres = as.character(genres))
+
+movielens <- left_join(ratings, movies, by = "movieId")
+```
+
+```{r edx_and_validation, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# Creation of test and validation sets ######
+
+# Validation set will be 10% of MovieLens data
+set.seed(1, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1)`
+
+test_index <- createDataPartition(y = movielens$rating, times = 1, 
+                                  p = 0.1, list = FALSE)
+edx <- movielens[-test_index,]
+temp <- movielens[test_index,]
+
+# Make sure userId and movieId in validation set are also in edx set
+validation <- temp %>% 
+  semi_join(edx, by = "movieId") %>%
+  semi_join(edx, by = "userId")
+
+# Add rows removed from validation set back into edx set
+removed <- anti_join(temp, validation)
+edx <- rbind(edx, removed)
+
+```
+
+```{r adding_new_columns, eval=FALSE, message=FALSE, include=FALSE}
+# ___________________________________########
+# ADDING NEW COLUMNS #######
+# movie_year, rating_date, rating_year ####
+# ___________________________________########
+
+# In order to visualize and filter data for exploration, we will add in the 
+# data frame three new columns:
+# - movie_year (integer)
+# - rating_year (integer)
+# - rating_date (YY-MM-DD HH:MM:SS POSIXct format)
+
+# This change also could be useful to add time effects 
+# in our final model to enhanced the RMSE results
+
+# Creating and index with short and large movie names (with parenthesis), 
+# needed to datawrangling tests
+ind <- c(1, 2, 3, 4, 5, 6, 21, 29, 39, 47, 67, 107, 108, 109, 112, 121, 
+         122, 123, 124, 128)
+
+# Adding rating_date and rating_year ######
+edx <- edx %>% mutate(rating_date = as_datetime(timestamp), 
+                      rating_year = as.integer(year(rating_date)))
+
+# Creating the new column "movie_year", extracting year from "title" #####
+edx <- edx %>% mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
+
+# Removing (parenthesis)  from "movie_year" column ####
+movie_years_temp <- edx %>% pull(movie_year)
+movie_years_temp <- str_remove_all(movie_years_temp, "\\(")
+movie_years_temp <- str_remove(movie_years_temp, "\\)")
+
+# Adding the cleaned "movie_years_temp" to data set #####
+edx <- edx %>% 
+  mutate(movie_year = as.integer(movie_years_temp))
+```
+
+```{r test_and_train, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# ___________________________________########
+#### TEST SET AND TRAIN SET ########
+# ___________________________________########
+
+# Creation of test set y train set from edx data frame ######
+# Note that validation set will not be used during training and tuning
+
+# We will use 90% of data to train, and 10% of data to test.
+
+set.seed(1970, sample.kind="Rounding")
+test_index <- createDataPartition(y = edx$rating, times = 1, p = 0.1,
+                                  list = FALSE)
+train_edx <- edx[-test_index,]
+test_edx <- edx[test_index,]
+
+# SemiJoin #####
+
+test_edx <- test_edx %>% 
+  semi_join(train_edx, by = "movieId") %>% 
+  semi_join(train_edx, by = "userId")
+```
+
+***
+
+### Abstract
+
+This report explains the process of building a linear model for movie ratings prediction, through which an RMSE of 0.8648047 is achieved. The final model takes into account movie effects ($b_i$), user effects ($b_u$), movie year effects ($b_{my}$), and rating year effects ($b_{ry}$), and its expression is:
+$$Y_{u,i} = mu + b_i + b_u + b_{my} + b_{ry} + \epsilon_{u,i}$$
+
+During model development, we experimented with the genre effect in two different ways. The first approach was to separate the movie genres by row, and add them to the model in the same way that the movie, user, release year, and rating year effects were added: $Y_{u,i} = mu + b_i + b_u + b_{my} + b_{ry} + b_g + \epsilon_{u,i}$
+
+With this model we get an RMSE on the test data set of 0.8630654. This RMSE was by far the best of all those obtained on the test data set. However, it involves adding observations, and we prefer to present a final solution in which the number of observations is not altered.
+
+The second approach was to add the gender effect using dummy variables with values 0 or 1 for each gender. In this way, no observations (rows) are added, but columns, in order to multiply the weight ($\beta$) of each gender by the value of the dummy variable. This model presents the following expression: $Y_{u,i} = mu + b_i + b_u + \sum^K_{k=1} x^k_{u,i}\beta_k + \epsilon_{u,i},$ with $x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$. 
+
+In this case, the RMSE obtained on the test set was 0.8874411. This result turned out to be worse than that obtained with a simple model that only took into account the film and user effects. Being a linear model, nothing, except changing the way in which the weights of each genre were calculated, was going to improve the result more than to eliminate the genre effect completely. After several tests, without finding an optimal way to calculate these weights, we decided to go for the simplest final model, which does not take into account the movie genres, but does not add observations in the original data sets.
+
+As additional information, we comment here that before adopting the linear approach, we performed tests with the _recommenderlab_ package. This approach was finally abandoned, among other reasons for its computational demands but, above all, for including techniques that we did not master at the time of development of our model.
+
+***
+
+# 1. Introduction
+
+## 1.1 Datasets description
+To build the prediction model, we have used a data frame called *edx*, that contains 9,000,055 rows, with the ratings of 10,677 movies, granted by 68,878 users. 
+In addition to the user and movie identifiers (*userId* and *movieId*, respectively), the data frame includes *rating*, *timestamp*, *title* and *genres* variables[^1]:
+
+| userId| movieId| rating| timestamp|title                         |genres                          |
+|------:|-------:|------:|---------:|:-----------------------------|:-------------------------------|
+|      1|     122|      5| 838985046|Boomerang (1992)              |Comedy/Romance                  |
+|      1|     185|      5| 838983525|Net, The (1995)               |Action/Crime|Thriller           |
+|      1|     231|      5| 838983392|Dumb & Dumber (1994)          |Comedy                          |
+|      1|     292|      5| 838983421|Outbreak (1995)               |Action/Drama/Sci-Fi/Thriller    |
+|      1|     316|      5| 838983392|Stargate (1994)               |Action/Adventure/Sci-Fi         |
+
+It is important to note that the genres variable is multi-categorical. A movie can belong to several genres, so the genres column has several combinations. To analyze the effect of genres on ratings, it is necessary to isolate each one.
+
+The *edx* data frame was divided in a training set, with the 90% of the data, and a test set, and comes from the *movielens* data frame.
+
+In turn, *movielens* data frame contains 10,100,000 observations, of which 10% were set aside to create the validation set. It is important to note that the *validation* set was not used for training, nor to calculate the *Root Mean Square Error* (RMSE) of the model during its construction. 
+
+## 1.2 Goals and key steps
+Our primary goal was to develop a model capable of achieving an RMSE below 0.86490 but, at the same time, manageable in terms of computational capabilities. In a first approach, we try with "Collaborative Filtering" type models using the *recommenderlab* package. However, and after several tests, we realized that to keep the training and validation times within reasonable ranges, it was necessary to work with a much smaller sample of the "edx" data frame than the original. Faced with this situation, we prefer to test a simpler, more approximate linear model that will enable us to work with the complete data frame. The assumption here is that, although the models available in the recommenderlab package could be more powerful, it is preferable to train a simpler model with more data.
+
+In addition, the approach had other considerable disadvantages for us:
+
+1. The results shown in the references consulted[^2] [^3] were very far by themselves from our objectives in terms of RMSE.
+2. This made us think that the results of the model obtained with the *recommenderlab* package should be incorporated into a more complex model. Despite having even reviewed the original papers of the package[^4] [^5], we could not see how to incorporate the results of the models included in it in our final model.
+3. The references consulted did not allow us to determine how to apply the model on the complete validation test.
+4. Some of the models included in the package are based on techniques related to matrix factorization, Singular Value Decomposition (SVD) and Principal Components Analysis (PCA)[^6]. Our knowledge of them is very introductory. Given the nature of this project, we believe that the appropriate approach is to work on a model that we are able to explain.
+
+After doing an exploratory analysis of the data, we realized that, in addition to the effects of users and movies, it was necessary to explore the effects related to the year of the movie, the year in which the rating was made, and the genres of each movie.
+
+Once we decided on a simpler linear approach, we began to build the model step by step, adding components in order. In this way, we could determine the effects of each new element, and build a table with the RMSEs obtained on the test set after each iteration. The order in which we included each element was as follows:
+
+1. Avg. ratings: $mu$
+2. Movie effects: $b_i$
+3. User effects: $b_u$
+4. Movie year effects: $b_{my}$
+5. Rating year effects: $b_{ry}$
+6. Genres effects (approach 1): $b_g$
+7. Genres effects (approach 2): $\sum^K_{k=1} x^k_{u,i}\beta_k$
+
+We left the effect of genres for last, because we weren't sure how they would affect the model. On the one hand, we were aware that the genre of the films provides a lot of information and explains an important part of the variability of the data. But, on the other hand, we did not know if its inclusion would add noise to the model. Each movie can belong to several genres (and the possible combinations in the *edx* data frame exceeded 700). 
+
+To deal with the genre of movies, in the first approach, we separate each genre by row. In this way, a film that belongs to four genres (for example: Action, Drama, Sci-Fi, Thriller), is transformed into four different observations for each rating obtained: one for Action, another for Drama, another for Sci-Fi, and another for Thriller. This allows us to calculate the effect of each gender separately but, at the same time, it gives each genre the same rating that the user has given the movie.
+
+It is clear that some genres are liked more than others, and that each user prefers some genres over others. However, a user may like war movies, and comedies, but they don't have to like the combination of comedy and war. Analyzing each gender separately, and not their combinations, we feared that the results would take us away from our goal in terms of RMSE.
+
+Despite our doubts, adding the gender effect to the model, treated in the manner described, represented a very significant improvement in the results on the test set.
+
+Other factors, such as the year the rating was granted, have a much less significant effect. But we decided to keep it in the model because although to a lesser extent, it also contributes to improving the results.
+
+The second attempt to incorporate the effect of the movie genre involves dummy variables for each genre, which are represented by a column, with the values 1 and 0 depending on whether or not the film belongs to that genre. We will see all this in more detail in the next section.
+
+The final model, however, does not incorporate the gender effect in either way. The first approach involves adding observations, and the second gave worse results than simpler linear models, which only consider movie and user effects.
+
+[^1]: In the examples with tables, we have replaced the original separators (|) by slashes (/). 
+[^2]: https://rpubs.com/elias_alegria/intro_recommenderlab    
+[^3]: https://rpubs.com/tarashnot/recommender_comparison 
+[^4]: https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf 
+[^5]: https://cran.rstudio.com/web/packages/recommenderlab/recommenderlab.pdf
+[^6]: https://rafalab.github.io/dsbook/large-datasets.html#factor-analysis    
+
+
+# 2. Methods and Analysis
+
+## 2.1 Data wrangling
+
+As already described in the introduction, the *edx* data frame presents the variables *userId*, *movieId*, *rating*, *timestamp*, *title*, *genres*.
+
+The title of the film includes the year of release (in parentheses), and the *timestamp* reflects the moment in which a user gave a rating to the film. To explore the effect of these two factors, the first change made to the data frames was to extract the movie's release year from the title and create a new column called *movie_year*. For the same reasons, the *timestamp* was used to create the columns named *rating_date* and *rating_year*. 
+
+Here we show a sample of the results (to save space, we have selected the variables *userId*, *movieId*, *rating*, *title*, *genre*, *rating_year* and *movie_year*, and films with short titles):  
+
+| userId| movieId| rating|title                   |genres                       | rating_year| movie_year|
+|------:|-------:|------:|:-----------------------|:----------------------------|-----------:|----------:|
+|      1|     122|      5|Boomerang (1992)        |Comedy/Romance               |        1996|       1992|
+|      1|     185|      5|Net, The (1995)         |Action/Crime/Thriller        |        1996|       1995|
+|      1|     292|      5|Outbreak (1995)         |Action/Drama/Sci-Fi/Thriller |        1996|       1995|
+|      1|     355|      5|Flintstones, The (1994) |Children/Comedy/Fantasy      |        1996|       1994|
+
+
+The next change made to the original data frame was already commented on in the introduction: the separation into rows of the genres of each film. Although this change was not made until practically the end of the model development, we review it here to maintain expository coherence. Here is an example of the result of this change:
+
+| userId| movieId| rating|title                                                        |genres    | rating_year| movie_year|
+|------:|-------:|------:|:------------------------------------------------------------|:---------|-----------:|----------:|
+|      1|     122|    5.0|Boomerang (1992)                                             |Comedy    |        1996|       1992|
+|      1|     122|    5.0|Boomerang (1992)                                             |Romance   |        1996|       1992|
+|      1|     185|    5.0|Net, The (1995)                                              |Action    |        1996|       1995|
+|      1|     185|    5.0|Net, The (1995)                                              |Crime     |        1996|       1995|
+|      1|     185|    5.0|Net, The (1995)                                              |Thriller  |        1996|       1995|
+|      1|     292|    5.0|Outbreak (1995)                                              |Action    |        1996|       1995|
+|      1|     292|    5.0|Outbreak (1995)                                              |Drama     |        1996|       1995|
+|      1|     292|    5.0|Outbreak (1995)                                              |Sci-Fi    |        1996|       1995|
+|      1|     292|    5.0|Outbreak (1995)                                              |Thriller  |        1996|       1995|
+|      1|     355|    5.0|Flintstones, The (1994)                                      |Children  |        1996|       1994|
+|      1|     355|    5.0|Flintstones, The (1994)                                      |Comedy    |        1996|       1994|
+|      1|     355|    5.0|Flintstones, The (1994)                                      |Fantasy   |        1996|       1994|
+
+Finally, and as a necessary step to analyze the effect of the film's genre according to the expression $\sum^K_{k=1}x^k_{u,i}\beta_k$, with $x^k_{u, i}=1$ if $g_{u, i}$ is genre $k$, we create dummy variables with values 0 and 1. The following table shows an example, with the genres _Action_, _Adventure_ and _Sci-Fi_. 
+
+| movieId|genres                        | genres_Action| genres_Adventure| genres_Sci_Fi|
+|-------:|:-----------------------------|-------------:|----------------:|-------------:|
+|     122|Comedy/Romance                |             0|                0|             0|
+|     185|Action/Crime/Thriller         |             1|                0|             0|
+|     292|Action/Drama/Sci-Fi/Thriller  |             1|                0|             1|
+|     316|Action/Adventure/Sci-Fi       |             1|                1|             1|
+|     329|Action/Adventure/Drama/Sci-Fi |             1|                1|             1|
+|     355|Children/Comedy/Fantasy       |             0|                0|             0|
+
+
+## 2.2 Data exploration
+
+Our first steps with the *recommenderlab* package focused on creating the rating matrix, and displaying it. Regardless of the use or not of the package in the final model, this allows us to visualize a sample of the data to get an idea of its nature.
+
+
+```{r matrix_creation, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# Matrix creation #######
+
+matrix_edx <- edx[1:1000000,] %>% 
+  select(userId, movieId, rating)
+
+rec_matrix_edx <- matrix_edx %>% as("realRatingMatrix")
+
+```
+
+
+```{r matrix_visualization, eval=FALSE, fig.align='center', message=FALSE, include=FALSE}
+# Matrix visualization #######
+
+image(rec_matrix_edx[1:50,1:50])
+```
+
+Ratings range from 0.5 to 5. With 50 movies rated by 50 users, we can already see several things:
+
+1. There are users (rows) who rate more than others, and there are users who rate very few movies.
+2. There are movies (columns) that are rated more than others, and there are movies that get very few ratings.
+3. There are movies that tend to be rated better than others.
+4. Although in this visualization it is not very evident, there are users who tend to give higher ratings than others.
+
+The first two points already tell us that regularization (the penalty of estimates created from small samples) is an element that must be taken into account in the construction of the model. We will discuss the issue of regularization in more detail later.
+
+To verify these statements, we show here the distribution of the number of ratings per user and per film, where the variability presented by the data is clearly seen: 
+
+```{r distribution_number_ratings_user, eval=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+edx %>% 
+  group_by(userId) %>% 
+  mutate(n =  n()) %>% 
+  select(n) %>% 
+  unique() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
+  scale_x_continuous(trans = "log10") +
+  labs(title = "Distribution of number of ratings by user") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+```
+
+```{r distribution_number_ratings_movie, eval=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(n =  n()) %>% 
+  select(n) %>% 
+  unique() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
+  scale_x_continuous(trans = "log2") +
+  labs(title = "Distribuion of number of ratings by movie") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+```
+
+The following table shows a selection of the 5 most active users, and the 5 least active:
+
+| userId| user_ratings|
+|------:|------------:|
+|  59269|         6616|
+|  67385|         6360|
+|  14463|         4648|
+|  68259|         4036|
+|  27468|         4023|
+|:::::::|:::::::::::::|
+|  71344|           14|
+|  15719|           13|
+|  50608|           13|
+|  22170|           12|
+|  62516|           10|
+
+Regarding movies, the following table shows a selection of the 5 most rated, and the 5 least rated. As you can see clearly in the distribution chart, there are blockbusters that get thousands of ratings, and movies that barely get one rating.
+
+| movieId|title                                                        | movie_ratings|
+|-------:|:------------------------------------------------------------|-------------:|
+|     296|Pulp Fiction (1994)                                          |         31362|
+|     356|Forrest Gump (1994)                                          |         31079|
+|     593|Silence of the Lambs, The (1991)                             |         30382|
+|     480|Jurassic Park (1993)                                         |         29360|
+|     318|Shawshank Redemption, The (1994)                             |         28015|
+|::::::::|:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::|::::::::::::::|
+|   33140|Down and Derby (2005)                                        |             1|
+|   61913|Africa addio (1966)                                          |             1|
+|   63141|Rockin' in the Rockies (1945)                                |             1|
+|    4820|Won't Anybody Listen? (2000)                                 |             1|
+|   39429|Confess (2005)                                               |             1|
+
+
+Points 3 and 4 do are directly related to what has been called *movie effects* (or movie bias) and *user effects* (or user bias).
+
+Again, we show the distribution of the data:
+
+```{r distribution_avg_rating_movie, eval=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+# Distribution of avg. ratings per movie ######
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating)) +
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
+  labs(title = "Distribution of avg. ratings per movie") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+```
+
+```{r distribution_avg_rating_user, eval=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+
+edx %>% 
+  group_by(userId) %>% 
+  mutate(avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating)) +
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
+  labs(title = "Distribution of avg. ratings per user") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+```
+
+In both cases we see approximately normal distributions, especially in the average ratings per user. As can be seen in the matrix, there are movies that tend to be rated below average, and others above average, and users who like all movies, and others who are very demanding. Clearly, both effects had to be included in the model.
+
+Now the need for regularization becomes evident. If we review the list of the 10 best rated films, we will see that if we do not apply a penalty in cases where the sample is small, we get results with very few ratings. They seem to be little-known movies seen by very few people.
+
+ movieId |title                                                                            | avg_rating| movie_ratings|
+|-------:|:--------------------------------------------------------------------------------|----------:|-------------:|
+|   53355|Sun Alley (Sonnenallee) (1999)                                                   |       5.00|             1|
+|   51209|Fighting Elegy (Kenka erejii) (1966)                                             |       5.00|             1|
+|   33264|Satan's Tango (Sátántangó) (1994)                                                |       5.00|             2|
+|   42783|Shadows of Forgotten Ancestors (1964)                                            |       5.00|             1|
+|    3226|Hellhounds on My Trail (1999)                                                    |       5.00|             1|
+|   64275|Blue Light, The (Das Blaue Licht) (1932)                                         |       5.00|             1|
+|    5194|Who's Singin' Over There? (a.k.a. Who Sings Over There) (Ko to tamo peva) (1980) |       4.75|             4|
+|   65001|Constantine's Sword (2007)                                                       |       4.75|             2|
+|   26048|Human Condition II, The (Ningen no joken II) (1959)                              |       4.75|             4|
+|   26073|Human Condition III, The (Ningen no joken III) (1961)                            |       4.75|             4|
+
+Once the regularization is applied (in this case lambda is equal to 0.5[^7]), we see that the list makes much more sense:
+
+| movieId|title                                         | avg_rating| movie_ratings|
+|-------:|:---------------------------------------------|----------:|-------------:|
+|     318|Shawshank Redemption, The (1994)              |   4.455052|         28015|
+|     858|Godfather, The (1972)                         |   4.415242|         17747|
+|    4454|More (1998)                                   |   4.400000|             7|
+|      50|Usual Suspects, The (1995)                    |   4.365753|         21648|
+|     527|Schindler's List (1993)                       |   4.363399|         23193|
+|     912|Casablanca (1942)                             |   4.320232|         11232|
+|     904|Rear Window (1954)                            |   4.318379|          7935|
+|     922|Sunset Blvd. (a.k.a. Sunset Boulevard) (1950) |   4.315141|          2922|
+|    1212|Third Man, The (1949)                         |   4.310699|          2967|
+|    3435|Double Indemnity (1944)                       |   4.309817|          2154|
+
+However, in the case of films with the lowest average rating, the regularization does not appear to be very effective. Without regularizing, the result shows many observations with few ratings:
+
+| movieId|title                                     | avg_rating| movie_ratings|
+|-------:|:-----------------------------------------|----------:|-------------:|
+|    6189|Dischord (2001)                           |  1.0000000|             1|
+|    6483|From Justin to Kelly (2003)               |  0.9020101|           199|
+|   61348|Disaster Movie (2008)                     |  0.8593750|            32|
+|    7282|Hip Hop Witch, Da (2000)                  |  0.8214286|            14|
+|    8859|SuperBabies: Baby Geniuses 2 (2004)       |  0.7946429|            56|
+|    5805|Besotted (2001)                           |  0.5000000|             2|
+|   61768|Accused (Anklaget) (2005)                 |  0.5000000|             1|
+|   64999|War of the Worlds 2: The Next Wave (2008) |  0.5000000|             2|
+|   63828|Confessions of a Superhero (2007)         |  0.5000000|             1|
+|    8394|Hi-Line, The (1999)                       |  0.5000000|             1|
+
+After regularization the list shows lower average ratings, but in most cases the sample is reduced to one instance:
+
+| movieId|title                                                        | avg_rating| movie_ratings|
+|-------:|:------------------------------------------------------------|----------:|-------------:|
+|    5702|When Time Ran Out... (a.k.a. The Day the World Ended) (1980) |  0.6666667|             1|
+|    4071|Dog Run (1996)                                               |  0.6666667|             1|
+|    4075|Monkey's Tale, A (Les Château des singes) (1999)             |  0.6666667|             1|
+|   55324|Relative Strangers (2006)                                    |  0.6666667|             1|
+|    6189|Dischord (2001)                                              |  0.6666667|             1|
+|    5805|Besotted (2001)                                              |  0.4000000|             2|
+|   64999|War of the Worlds 2: The Next Wave (2008)                    |  0.4000000|             2|
+|   61768|Accused (Anklaget) (2005)                                    |  0.3333333|             1|
+|   63828|Confessions of a Superhero (2007)                            |  0.3333333|             1|
+|    8394|Hi-Line, The (1999)                                          |  0.3333333|             1|
+
+Our hypothesis is that in general people value more frequently the movies they like. In addition, poorly rated films are generally less viewed (people are carried away by the opinion of the majority). This generates biases that are very difficult to avoid, because they are part of the data with which the model is trained. In fact, when we review the final model, we will see that it tends to overestimate ratings when movies have a low average.
+
+Although this analysis is not particularly original in its approach, it was absolutely necessary to understand the nature of the data we were working with. These results are undoubtedly to be expected, but we had to check it out. It is not good policy to take something for granted when working with unknown data sets.
+
+[^7]: Lambda = 0.5 is model the best tune
+
+
+
+

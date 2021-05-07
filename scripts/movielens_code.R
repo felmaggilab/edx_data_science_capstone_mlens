@@ -161,6 +161,8 @@ edx_little
 # DEALING WITH GENRES ####
 # ___________________________________########
 
+# Test #####
+
 edx_little %>% 
   as_tibble()
 
@@ -168,13 +170,13 @@ edx_little_g  <- edx_little %>%
   separate_rows(genres, sep = "\\|")
 
 edx_little_g %>% 
-  as_tibble()
+  select(userId, movieId, rating, title, genres, rating_year, movie_year) %>% 
+  knitr::kable()
 
-
-
-
-# Applying changes to entire edx data frame (except genres)
-# ______________________________________
+# ___________________________________########
+# APPLYING CHANGES TO ENTIRE DATA ######
+# EDX DATA FRAME (except genres) #####
+# ___________________________________########
 
 # Adding rating_date and rating_year #####
 edx <- edx %>% mutate(rating_date = as_datetime(timestamp), 
@@ -194,10 +196,10 @@ edx <- edx %>%
 
 # Review of final results
 edx %>% 
-  select(userId, movieId, rating, title, rating_year, movie_year) %>% 
+  select(userId, movieId, rating, title, genres, rating_year, movie_year) %>% 
   head() %>% 
   filter(movieId == 122 | movieId == 185 | movieId == 292 | movieId == 355) %>% 
-  as_tibble()
+  knitr::kable()
 
 # ___________________________________########
 #### TEST SET AND TRAIN SET ########
@@ -306,13 +308,141 @@ sd_rating <- sd(edx$rating) # SD rating ######
 sd_rating
 # 1.060331
 
+# Distribution of number of ratings by movie ####
+
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(n =  n()) %>% 
+  select(n) %>% 
+  unique() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
+  scale_x_continuous(trans = "log2") +
+  labs(title = "Distribuion of number of ratings by movie") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+
+# Top 10 Most Rated Movies ####
+
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(movie_ratings =  n()) %>% 
+  select(title, movie_ratings) %>% 
+  arrange(desc(movie_ratings)) %>% 
+  unique() %>% 
+  head(10) %>% 
+  knitr::kable()
+
+# The 10 least-rated movies ######
+
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(movie_ratings =  n()) %>% 
+  select(title, movie_ratings) %>% 
+  arrange(desc(movie_ratings)) %>% 
+  unique() %>% 
+  tail(10) %>% 
+  knitr::kable()
+  
+# Distribution of number of ratings by user #####
+
+edx %>% 
+  group_by(userId) %>% 
+  mutate(n =  n()) %>% 
+  select(n) %>% 
+  unique() %>% 
+  ggplot(aes(n)) +
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
+  scale_x_continuous(trans = "log10") +
+  labs(title = "Distribution of number of ratings by user") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+# Top 10 most active users #####
+
+edx %>% 
+  group_by(userId) %>% 
+  mutate(user_ratings =  n()) %>% 
+  select(userId, user_ratings) %>% 
+  arrange(desc(user_ratings)) %>% 
+  unique() %>% 
+  head(10) %>% 
+  knitr::kable()
+
+# The 10 least active users ######
+
+edx %>% 
+  group_by(userId) %>% 
+  mutate(user_ratings =  n()) %>% 
+  select(userId, user_ratings) %>% 
+  arrange(desc(user_ratings)) %>% 
+  unique() %>% 
+  tail(10) %>% 
+  knitr::kable()
+
+
 # Distribution of avg. ratings per movie ######
 edx %>% 
   group_by(movieId) %>% 
   mutate(avg_rating = mean(rating)) %>% 
   ggplot(aes(avg_rating)) +
   geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
-  labs(title = "Distribution of avg. ratings per movie")
+  labs(title = "Distribution of avg. ratings per movie") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+# The 10 highest rated films ####
+# __Not regularized ####
+
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(avg_rating = mean(rating), movie_ratings = n()) %>% #Not normalized
+  select(movieId, title, avg_rating, movie_ratings) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  head(10) %>% 
+  knitr::kable()
+
+# __Regularized ####
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(avg_rating = (sum(rating))/(n()+lambda), movie_ratings = n()) %>% 
+  select(movieId, title, avg_rating, movie_ratings) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  head(10) %>% 
+  knitr::kable()
+
+# The 10 worst rated movies #####
+# __Not regularized ####
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(avg_rating = mean(rating), movie_ratings = n()) %>% 
+  select(movieId, title, avg_rating, movie_ratings) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  tail(10) %>% 
+  knitr::kable()
+
+# __Regularized ####
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(avg_rating = (sum(rating))/(n()+lambda), movie_ratings = n()) %>% 
+  select(movieId, title, avg_rating, movie_ratings) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  tail(10) %>% 
+  knitr::kable()
+
+edx %>% 
+  group_by(movieId) %>% 
+  mutate(avg_rating = (sum(rating))/(n())) %>% 
+  select(movieId, title, avg_rating) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  tail(10) %>% 
+  knitr::kable()
 
 # Distribution of avg. ratings per user ######
 edx %>% 
@@ -320,7 +450,12 @@ edx %>%
   mutate(avg_rating = mean(rating)) %>% 
   ggplot(aes(avg_rating)) +
   geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
-  labs(title = "Distribution of avg. ratings per user")
+  labs(title = "Distribution of avg. ratings per user") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+
+
 
 edx %>% arrange(movie_year)
 # Films from 1915 to 2008
@@ -1426,115 +1561,115 @@ Beta_Action <-
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId")%>%
-  summarise(Beta_Action = mean(rating - (sum(rating*genres_Action/(sum(genres_Action)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Action = mean(rating - sum(rating*genres_Action)/(sum(genres_Action)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Adventure <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Adventure = mean(rating - (sum(rating*genres_Adventure/(sum(genres_Adventure)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Adventure = mean(rating - sum(rating*genres_Adventure)/(sum(genres_Adventure)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Animation <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Animation = mean(rating - (sum(rating*genres_Animation/(sum(genres_Animation)+lambda))- b_i_genres - b_u_genres)))
+  summarise(Beta_Animation = mean(rating - sum(rating*genres_Animation)/(sum(genres_Animation)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Children <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Children = mean(rating - (sum(rating*genres_Children/(sum(genres_Children)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Children = mean(rating - sum(rating*genres_Children)/(sum(genres_Children)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Comedy <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Comedy = mean(rating - (sum(rating*genres_Comedy/(sum(genres_Comedy)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Comedy = mean(rating - sum(rating*genres_Comedy)/(sum(genres_Comedy)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Fantasy  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Fantasy = mean(rating - (sum(rating*genres_Fantasy/(sum(genres_Fantasy)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Fantasy = mean(rating - sum(rating*genres_Fantasy)/(sum(genres_Fantasy)+lambda) - b_i_genres - b_u_genres))
 
 Beta_IMAX  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_IMAX = mean(rating - (sum(rating*genres_IMAX/(sum(genres_IMAX)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_IMAX = mean(rating - sum(rating*genres_IMAX)/(sum(genres_IMAX)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Sci_Fi  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Sci_Fi = mean(rating - (sum(rating*genres_Sci_Fi/(sum(genres_Sci_Fi)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Sci_Fi = mean(rating - sum(rating*genres_Sci_Fi)/(sum(genres_Sci_Fi)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Drama  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Drama = mean(rating - (sum(rating*genres_Drama/(sum(genres_Drama)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Drama = mean(rating - sum(rating*genres_Drama)/(sum(genres_Drama)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Horror <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Horror  = mean(rating - (sum(rating*genres_Horror/(sum(genres_Horror)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Horror  = mean(rating - sum(rating*genres_Horror)/(sum(genres_Horror)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Mystery <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Mystery  = mean(rating - (sum(rating*genres_Mystery/(sum(genres_Mystery)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Mystery  = mean(rating - sum(rating*genres_Mystery)/(sum(genres_Mystery)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Romance  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Romance = mean(rating - (sum(rating*genres_Romance/(sum(genres_Romance)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Romance = mean(rating - sum(rating*genres_Romance)/(sum(genres_Romance)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Thriller <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Thriller = mean(rating - (sum(rating*genres_Thriller/(sum(genres_Thriller)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Thriller = mean(rating - sum(rating*genres_Thriller)/(sum(genres_Thriller)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Crime  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Crime = mean(rating - (sum(rating*genres_Crime/(sum(genres_Crime)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Crime = mean(rating - sum(rating*genres_Crime)/(sum(genres_Crime)+lambda) - b_i_genres - b_u_genres))
 
 Beta_War  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_War = mean(rating - (sum(rating*genres_War/(sum(genres_War)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_War = mean(rating - sum(rating*genres_War)/(sum(genres_War)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Western  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Western = mean(rating - (sum(rating*genres_Western/(sum(genres_Western)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Western = mean(rating -sum(rating*genres_Western)/(sum(genres_Western)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Musical  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Musical = mean(rating - (sum(rating*genres_Musical/(sum(genres_Musical)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Musical = mean(rating - sum(rating*genres_Musical)/(sum(genres_Musical)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Documentary  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId")  %>%
-  summarise(Beta_Documentary = mean(rating - (sum(rating*genres_Documentary/(sum(genres_Documentary)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Documentary = mean(rating - sum(rating*genres_Documentary)/(sum(genres_Documentary)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Film_Noir  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Film_Noir = mean(rating - (sum(rating*genres_Film_Noir/(sum(genres_Film_Noir)+lambda)) - b_i_genres - b_u_genres)))
+  summarise(Beta_Film_Noir = mean(rating - sum(rating*genres_Film_Noir)/(sum(genres_Film_Noir)+lambda) - b_i_genres - b_u_genres))
 
 # Calculating Sum(XuiK * BetaK), XuiK = 1 if genre = K
 b_g_genres <- train_edx_genres %>% 
