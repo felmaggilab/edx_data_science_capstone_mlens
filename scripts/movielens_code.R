@@ -211,7 +211,6 @@ edx %>%
 head(edx)
 
 # We will use 90% of data to train, and 10% of data to test.
-
 set.seed(1970, sample.kind="Rounding")
 test_index <- createDataPartition(y = edx$rating, times = 1, p = 0.1,
                                   list = FALSE)
@@ -219,7 +218,6 @@ train_edx <- edx[-test_index,]
 test_edx <- edx[test_index,]
 
 # SemiJoin #####
-
 test_edx <- test_edx %>% 
   semi_join(train_edx, by = "movieId") %>% 
   semi_join(train_edx, by = "userId")
@@ -266,17 +264,14 @@ length(unique(edx$movieId))
 # 10677
 
 # Number of users #####
-
 length(unique(edx$userId)) 
 # 69878
 
 # min and max ratings ######
-
 min(edx$rating)
 max(edx$rating)
 
 # Matrix creation #######
-
 head(edx)
 
 edx_recom <- edx %>% 
@@ -288,7 +283,6 @@ edx_ui <- edx_recom %>% as("realRatingMatrix")
 edx_ui[1:100,1:100] %>% getRatingMatrix
 
 # Matrix visualization #######
-
 image(edx_ui[1:50,1:50])
 
 matrix_edx_ui <- edx_ui %>%
@@ -309,7 +303,6 @@ sd_rating
 # 1.060331
 
 # Distribution of number of ratings by movie ####
-
 edx %>% 
   group_by(movieId) %>% 
   mutate(n =  n()) %>% 
@@ -322,31 +315,27 @@ edx %>%
   theme(plot.title = element_text(size = 10, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
-
 # Top 10 Most Rated Movies ####
-
 edx %>% 
-  group_by(movieId) %>% 
+  group_by(title) %>% 
   mutate(movie_ratings =  n()) %>% 
-  select(title, movie_ratings) %>% 
+  select(movieId, title, movie_ratings) %>% 
   arrange(desc(movie_ratings)) %>% 
   unique() %>% 
   head(10) %>% 
   knitr::kable()
 
 # The 10 least-rated movies ######
-
 edx %>% 
-  group_by(movieId) %>% 
+  group_by(title) %>% 
   mutate(movie_ratings =  n()) %>% 
-  select(title, movie_ratings) %>% 
+  select(movieId, title, movie_ratings) %>% 
   arrange(desc(movie_ratings)) %>% 
   unique() %>% 
   tail(10) %>% 
   knitr::kable()
   
 # Distribution of number of ratings by user #####
-
 edx %>% 
   group_by(userId) %>% 
   mutate(n =  n()) %>% 
@@ -360,7 +349,6 @@ edx %>%
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
 # Top 10 most active users #####
-
 edx %>% 
   group_by(userId) %>% 
   mutate(user_ratings =  n()) %>% 
@@ -371,7 +359,6 @@ edx %>%
   knitr::kable()
 
 # The 10 least active users ######
-
 edx %>% 
   group_by(userId) %>% 
   mutate(user_ratings =  n()) %>% 
@@ -380,7 +367,6 @@ edx %>%
   unique() %>% 
   tail(10) %>% 
   knitr::kable()
-
 
 # Distribution of avg. ratings per movie ######
 edx %>% 
@@ -394,7 +380,6 @@ edx %>%
 
 # The 10 highest rated films ####
 # __Not regularized ####
-
 edx %>% 
   group_by(movieId) %>% 
   mutate(avg_rating = mean(rating), movie_ratings = n()) %>% #Not normalized
@@ -454,8 +439,47 @@ edx %>%
   theme(plot.title = element_text(size = 10, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
+# The 10 users with the highest average rating #####
+# __Not regularized ####
+edx %>% 
+  group_by(userId) %>% 
+  mutate(avg_rating = mean(rating), user_ratings = n()) %>% #Not normalized
+  select(userId, avg_rating, user_ratings) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  head(10) %>% 
+  knitr::kable()
 
+# __Regularized ####
+edx %>% 
+  group_by(userId) %>% 
+  mutate(avg_rating = (sum(rating))/(n()+lambda), user_ratings = n()) %>% 
+  select(userId, avg_rating, user_ratings) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  head(10) %>% 
+  knitr::kable()
 
+# The 10 users with the lowest average rating #####
+# __Not regularized ####
+edx %>% 
+  group_by(userId) %>% 
+  mutate(avg_rating = mean(rating), user_ratings = n()) %>% #Not normalized
+  select(userId, avg_rating, user_ratings) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  tail(10) %>% 
+  knitr::kable()
+
+# __Regularized ####
+edx %>% 
+  group_by(userId) %>% 
+  mutate(avg_rating = (sum(rating))/(n()+lambda), user_ratings = n()) %>% 
+  select(userId, avg_rating, user_ratings) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  tail(10) %>% 
+  knitr::kable()
 
 edx %>% arrange(movie_year)
 # Films from 1915 to 2008
@@ -463,57 +487,197 @@ edx %>% arrange(movie_year)
 edx %>% arrange(rating_year)
 # Ratings from 1995 to 2008
 
-# Top 15 rated movies  #####
-edx %>% 
-  group_by(title) %>% 
-  summarise(ratings = n()) %>% 
-  arrange(desc(ratings)) %>% 
-  head(15) %>% 
-  knitr::kable()
-
-edx %>% 
-  group_by(title) %>% 
-  summarise(ratings = n()) %>% 
-  arrange(desc(ratings)) %>% 
-  tail(15) %>% 
-  knitr::kable()
-
-# Top 15 active users ##### 
-edx %>% 
-  group_by(userId) %>% 
-  summarise(ratings = n()) %>% 
-  arrange(desc(ratings)) %>% 
-  head(15) %>% 
-  knitr::kable()
-
-edx %>% 
-  group_by(userId) %>% 
-  summarise(ratings = n()) %>% 
-  arrange(desc(ratings)) %>%
-  tail(n = 15) %>% 
-  knitr::kable()
-
 # Visualization of average ratings vs movie_year #####
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(avg_rating = mean(rating)) %>% 
+  ggplot(aes(movie_year, avg_rating)) +
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Average ratings vs movie_year") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+# Movie release year, movies rated, ratings, ratings per movie #####
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(movie_year, movies_rated = length(unique(title)), ratings = n(),
+            ratings_per_movie = round(ratings/movies_rated)) %>% 
+  arrange(ratings) %>% 
+  unique() %>% 
+  # head(10) %>% 
+  knitr::kable()
 
 edx %>% 
   group_by(movie_year) %>% 
-  summarise(movie_year_avgs = mean(rating)) %>% 
-  ggplot(aes(movie_year, movie_year_avgs)) +
-  geom_point() +
-  geom_smooth()
+  summarise(movie_year, movies_rated = length(unique(title)), ratings = n(),
+            ratings_per_movie = round(ratings/movies_rated)) %>% 
+  arrange(ratings_per_movie) %>% 
+  unique() %>% 
+  # head(10) %>% 
+  knitr::kable()
+
+# Number of movies per relase year #####
+
+edx %>%   
+  group_by(movie_year) %>% 
+  summarise(movie_year, movies = length(unique(title))) %>% 
+  unique()
+
+# Movies released in 1917 #####
+edx %>% 
+  filter(movie_year == "1917") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>%
+  unique() %>% 
+  # head(10) %>% 
+  knitr::kable()
+
+# Movies released in 1940 #####
+#__arrange by number of ratings####
+edx %>% 
+  filter(movie_year == "1940") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(ratings)) %>% 
+  unique() %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__arrange by avg_rating ####
+edx %>% 
+  filter(movie_year == "1940") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  head(10) %>% 
+  knitr::kable()
+
+# Movies released in 1995 #####
+#__arrange by number of ratings####
+edx %>% 
+  filter(movie_year == "1995") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(ratings)) %>% 
+  unique() %>% 
+  head(10) %>%
+  knitr::kable()
+
+#__arrange by avg_rating####
+edx %>% 
+  filter(movie_year == "1995") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  head(10) %>%
+  knitr::kable()
+
+#__arrange by avg_rating: Regularized ####
+edx %>% 
+  filter(movie_year == "1995") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = (sum(rating))/(n()+lambda), title, ratings= n()) %>% 
+  arrange(desc(avg_rating)) %>% 
+  unique() %>% 
+  head(10) %>%
+  knitr::kable()
+
+edx %>% 
+  filter(movie_year == "1995") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(ratings)) %>% 
+  unique() %>% 
+  tail(10) %>%
+  knitr::kable()
+
+# Movies released in 2000 #####
+edx %>% 
+  filter(movie_year == "2000") %>% 
+  group_by(title) %>% 
+  summarise(title, avg_rating = mean(rating),title, ratings= n()) %>% 
+  arrange(desc(ratings)) %>% 
+  unique() %>% 
+  head(10) %>%
+  knitr::kable()
 
 # There is a clear effect of the premiere year, on the average ratings. 
 # This must be taken into account in our final model
 
-
 # Visualization of average ratings vs rating_year #####
-
 edx %>% 
   group_by(rating_year) %>% 
-  summarise(rating_year_avgs = mean(rating)) %>% 
-  ggplot(aes(rating_year, rating_year_avgs)) +
+  summarise(rating_avgs = mean(rating)) %>% 
+  ggplot(aes(rating_year, rating_avgs)) +
   geom_point() +
-  geom_smooth()
+  geom_smooth() +
+  labs(title = "Average ratings vs rating_year") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+# Movie rating year, movies rated, ratings, ratings per movie, avg_rating #####
+edx %>% 
+  group_by(rating_year) %>% 
+  summarise(rating_year, movies_rated = length(unique(title)), ratings = n(),
+            ratings_per_movie = round(ratings/movies_rated), 
+            avg_rating = round(mean(rating),2)) %>% 
+  # arrange(ratings) %>% 
+  unique() %>% 
+  knitr::kable()
+
+# Movies rated in 1996 #####
+edx %>% 
+  filter(rating_year == "1996") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(ratings)) %>% 
+  unique() %>% 
+  head(15) %>%
+  knitr::kable()
+
+# Movies rated in 1999 #####
+edx %>% 
+  filter(rating_year == "1999") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(ratings)) %>% 
+  unique() %>% 
+  head(15) %>%
+  knitr::kable()
+
+# Movies rated in 2000 #####
+edx %>% 
+  filter(rating_year == "2000") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(ratings)) %>% 
+  unique() %>% 
+  head(15) %>%
+  knitr::kable()
+
+# Movies rated in 2008 #####
+edx %>% 
+  filter(rating_year == "2008") %>% 
+  group_by(title) %>% 
+  summarise(avg_rating = mean(rating), title, ratings= n()) %>% 
+  arrange(desc(ratings)) %>% 
+  unique() %>% 
+  head(15) %>%
+  knitr::kable()
+
+
+edx %>% 
+  filter(year == "2008")
+  group_by(rating_year) %>% 
+  summarise(rating_year, movies_rated = length(unique(title)), ratings = n(),
+            ratings_per_movie = round(ratings/movies_rated), 
+            avg_rating = round(mean(rating),2)) %>% 
+  # arrange(ratings) %>% 
+  unique() %>% 
+  knitr::kable()
 
 # There is a certain effect of the rating year on the average ratings. 
 # We will add this to the model, but the result on the rmse should not 
