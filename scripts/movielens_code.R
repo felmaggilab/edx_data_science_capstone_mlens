@@ -668,20 +668,265 @@ edx %>%
   head(15) %>%
   knitr::kable()
 
-
-edx %>% 
-  filter(year == "2008")
-  group_by(rating_year) %>% 
-  summarise(rating_year, movies_rated = length(unique(title)), ratings = n(),
-            ratings_per_movie = round(ratings/movies_rated), 
-            avg_rating = round(mean(rating),2)) %>% 
-  # arrange(ratings) %>% 
-  unique() %>% 
-  knitr::kable()
-
 # There is a certain effect of the rating year on the average ratings. 
 # We will add this to the model, but the result on the rmse should not 
 # be very pronounced.
+
+# ___________________________________########
+##### EXPLORING GENRE EFFECT  ######
+##### APPROACH 1 ######
+# ___________________________________########
+
+# In order to use all the data provided in the data set, we will explore the
+# genre effect. At this point, we are not sure if this approach will introduce
+# noise to the model or, on the contrary, it will improve the RMSE
+
+# To add genre effect, we will separate geres by row (this change add more)
+# rows to the data sets (approach 1).
+
+# Separation of genres by rows  #######
+# Each combination of userId and movieId will now have as many rows as 
+# genres the movie has.
+
+edx_g <- edx %>% separate_rows(genres, sep = "\\|") # It takes some time!
+
+train_edx_g <- train_edx %>% separate_rows(genres, sep = "\\|")
+test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
+
+# Revision 
+
+head(edx_g) %>% knitr::kable()
+
+# Only 1 film has no genres listed
+edx_g %>% filter(genres == "(no genres listed)")
+
+# Average Rating by Genres ######
+avg_genres <- edx_g %>% 
+  group_by(genres) %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  summarise(avg_rating = mean(rating)) %>% 
+  arrange(desc(avg_rating))
+
+knitr::kable(avg_genres)
+
+# Number of Ratings by Genres #####
+ratings_genres <-  edx_g %>% 
+  group_by(genres) %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  summarise(ratings = n()) %>% 
+  arrange(desc(ratings))
+
+knitr::kable(ratings_genres)
+
+
+# Relation between number of ratings and average rating by gender #####
+genres_table <- avg_genres %>% 
+  left_join(ratings_genres, by = 'genres') 
+
+knitr::kable(genres_table)
+
+cor(genres_table$avg_rating, genres_table$ratings)
+
+genres_selected_top <- genres_table %>% 
+  filter(genres %in% c("Film-Noir", "Documentary", "War", "IMAX"))
+
+genres_selected_middle <- genres_table %>% 
+  filter(genres %in% c("Mystery", "Crime", "Drama", "Animation", 
+                       "Western", "Musical", "Animation", "Children, Fantasy",
+                       "Romance", "Adventure", "Thriller"))
+
+genres_selected_bottom <- genres_table %>% 
+  filter(genres %in% c("Horror", "Children", "Sci-Fi", "Action", "Comedy"))
+
+genres_table %>% 
+  ggplot(aes(ratings, avg_rating, color = genres)) +
+  geom_point(aes(color = genres), show.legend = FALSE) +
+  #geom_encircle(aes(x = ratings, y = avg_rating), 
+                #data = genres_selected_top, 
+                #color="red", 
+                #size=2, 
+                #expand=0.07) +
+  #geom_encircle(aes(x = ratings, y = avg_rating), 
+                #data = genres_selected_middle, 
+                #color="red", 
+                #size=2, 
+                #expand=0.07) +
+  #geom_encircle(aes(x = ratings, y = avg_rating), 
+  #data = genres_selected_bottom, 
+  #color="red", 
+  #size=2, 
+  #expand=0.07) +
+  geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02) +
+  labs(title = "Number of ratings versus average rating by gender")
+
+# Movie year versus genders rating counts ######
+
+edx_g %>% 
+  filter(!genres == "(no genres listed)") %>%
+  group_by(movie_year, genres) %>% 
+  summarise(genres_r_count = n()) %>% 
+  ggplot(aes(movie_year, genres_r_count , color = genres)) +
+  geom_point() +
+  labs(title = "Movie year versus genders rating counts")
+
+# Movie year versus genders rating counts (scale y = log2) ######
+edx_g %>% 
+  filter(!genres == "(no genres listed)") %>%
+  group_by(movie_year, genres) %>% 
+  summarise(genres_r_count = n()) %>% 
+  ggplot(aes(movie_year, genres_r_count , color = genres)) +
+  geom_point() +
+  scale_y_continuous(trans = "log10") +
+  labs(title = "Movie year versus genders rating counts")
+
+
+# Distributions of Ratings by Genres: NOT RUN! It crash R #
+# edx_g %>% 
+# filter(!genres == "(no genres listed)") %>% 
+# ggplot(aes(genres, rating)) +
+# geom_boxplot() +
+# geom_jitter(width = 0.1, alpha = 0.2) +
+# theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+# labs(title = "Distributions of Ratings by Genres")
+
+# Selecting and Active User ####### 
+edx_g %>% 
+  group_by(userId) %>% 
+  mutate(count = n()) %>% 
+  arrange(desc(count))
+
+user_59269 <- edx_g %>% filter(userId == 59269)
+# 6616 rated movies
+
+# Distributions of Ratings by Genres: User 59269 ######
+user_59269 %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  ggplot(aes(genres, rating)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Distributions of Ratings by Genres. User 59269") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+
+# Distributions of Ratings by Genres: Sample 10% obs. ######
+
+n <- nrow(edx_g) * 0.1
+
+set.seed(1970, sample.kind="Rounding")
+
+sample_edx_g <- sample_n(edx_g, n)
+
+# Comparison between edx avg gender rating and random sample ####
+
+avg_genres_2 <- edx_g %>% 
+  group_by(genres) %>% 
+  summarise(avg_rating = mean(rating), sd = sd(rating)) %>% 
+  arrange(desc(avg_rating))
+
+avg_genres_sample <- sample_edx_g %>% 
+  group_by(genres) %>% 
+  summarise(avg_rating = mean(rating), sd = sd(rating)) %>% 
+  arrange(desc(avg_rating))
+
+edx_sample_comp <- avg_genres_2 %>% 
+  left_join(avg_genres_sample, by = 'genres') %>% 
+  filter(!genres == "(no genres listed)")
+
+edx_sample_comp
+
+# Distributions of Ratings by Genres: Ramdom Sample ######
+sample_edx_g %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  ggplot(aes(genres, rating)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Distributions of Ratings by Genres. Sample")
+
+# Density avg rating by genres ######
+
+# Order by avg_rating
+edx_g$genres <- factor(edx_g$genres, levels = c("Film-Noir",
+                                                "Documentary",
+                                                "War",
+                                                "IMAX",
+                                                "Mystery",
+                                                "Drama",
+                                                "Crime",
+                                                "Animation",
+                                                "Musical",
+                                                "Western",
+                                                "Romance",
+                                                "Thriller",
+                                                "Fantasy",
+                                                "Adventure",
+                                                "Comedy",
+                                                "Action",
+                                                "Children",
+                                                "Sci-Fi",
+                                                "Horror"))
+
+# __Grouped by movie #####
+edx_g %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  group_by(movieId) %>% 
+  summarise(genres = genres, avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating, fill = genres)) +
+  geom_density(alpha = 0.2) +
+  scale_y_continuous(breaks=NULL) + 
+  labs(title = "Density avg rating by gender, grouped by movie")
+
+# __Grouped by movie: Film Noir vs. Comedy - Density #####
+edx_g %>% 
+  filter(genres == "Film-Noir"
+         | genres == "Comedy") %>%
+  group_by(movieId) %>% 
+  summarise(genres = genres, avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating,  fill = genres)) +
+  geom_density(alpha = 0.2) +
+  labs(title = "Density of avg rating by gender, grouped by movie: Film-Noir vs. Comedy") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+# __Grouped by movie: Film Noir vs. Comedy - Count #####
+edx_g %>% 
+  filter(genres == "Film-Noir"
+         | genres == "Comedy") %>%
+  group_by(movieId) %>% 
+  summarise(genres = genres, avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating, y = ..count..,  fill = genres)) +
+  geom_density(alpha = 0.2) +
+  labs(title = "Count of avg rating by gender, grouped by movie: Film-Noir vs. Comedy") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+# __Grouped by movie: Documentary vs. Drama #####
+edx_g %>% 
+  filter(genres == "Documentary"
+         | genres == "Drama") %>%
+  group_by(movieId) %>% 
+  summarise(genres = genres, avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating, fill = genres)) +
+  geom_density() +
+  labs(title = "Density avg rating by gender, grouped by movie: Documentary vs. Drama") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+  facet_grid(genres ~ .)
+
+# __Grouped by user #####
+edx_g %>% 
+  filter(!genres == "(no genres listed)") %>%
+  group_by(userId) %>% 
+  summarise(genres = genres, avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating, y = ..count.., fill = genres)) +
+  geom_density() +
+  scale_y_continuous(breaks=NULL) + #Las borramos.
+  #labs(title = "Density avg rating by gender, grouped by user") +
+  facet_grid(genres ~ .)
+
+?str_replace_all
 
 # ___________________________________########
 ##### RECOMMENDERLAB: dismissed ######
@@ -1254,206 +1499,7 @@ edx_reg_movie_user_myear_ryear_effect_rmse
 # __0.8562849 #####
 
 
-# ___________________________________########
-##### EXPLORING GENRE EFFECT  ######
-##### APPROACH 1 ######
-# ___________________________________########
 
-# In order to use all the data provided in the data set, we will explore the
-# genre effect. At this point, we are not sure if this approach will introduce
-# noise to the model or, on the contrary, it will improve the RMSE
-
-# To add genre effect, we will separate geres by row (this change add more)
-# rows to the data sets (approach 1).
-
-# Separation of genres by rows  #######
-# Each combination of userId and movieId will now have as many rows as 
-# genres the movie has.
-
-edx_g <- edx %>% separate_rows(genres, sep = "\\|") # It takes some time!
-
-train_edx_g <- train_edx %>% separate_rows(genres, sep = "\\|")
-test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
-
-# Revision 
-
-head(edx_g) %>% knitr::kable()
-
-# Only 1 film has no genres listed
-edx_g %>% filter(genres == "(no genres listed)")
-
-# Average Rating by Genres ######
-avg_genres <- edx_g %>% 
-  group_by(genres) %>% 
-  filter(!genres == "(no genres listed)") %>% 
-  summarise(avg_rating = mean(rating)) %>% 
-  arrange(desc(avg_rating))
-
-knitr::kable(avg_genres)
-
-# Number of Ratings by Genres #####
-ratings_genres <-  edx_g %>% 
-  group_by(genres) %>% 
-  filter(!genres == "(no genres listed)") %>% 
-  summarise(ratings = n()) %>% 
-  arrange(desc(ratings))
-
-knitr::kable(ratings_genres)
-
-
-# Relation between number of ratings and average rating by gender #####
-genres_table <- avg_genres %>% 
-  left_join(ratings_genres, by = 'genres') 
-
-knitr::kable(genres_table)
-
-genres_selected_top <- genres_table %>% 
-  filter(genres %in% c("Film-Noir", "Documentary", "War"))
-
-genres_selected_bottom <- genres_table %>% 
-  filter(genres %in% c("Horror", "Children", "Sci-Fi", "Children "))
-
-genres_table %>% 
-  ggplot(aes(ratings, avg_rating, color = genres)) +
-  geom_point() +
-  geom_encircle(aes(x = ratings, y = avg_rating), 
-                data = genres_selected_top, 
-                color="red", 
-                size=2, 
-                expand=0.04) +
-  geom_encircle(aes(x = ratings, y = avg_rating), 
-                data = genres_selected_bottom, 
-                color="red", 
-                size=2, 
-                expand=0.07) +
-  geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02)+
-  labs(title = "Number of ratings versus average rating by gender")
-
-# Movie year versus genders rating counts ######
-
-edx_g %>% 
-  filter(!genres == "(no genres listed)") %>%
-  group_by(movie_year, genres) %>% 
-  summarise(genres_r_count = n()) %>% 
-  ggplot(aes(movie_year, genres_r_count , color = genres)) +
-  geom_point() +
-  labs(title = "Movie year versus genders rating counts")
-
-# Movie year versus genders rating counts (scale y = log2) ######
-edx_g %>% 
-  filter(!genres == "(no genres listed)") %>%
-  group_by(movie_year, genres) %>% 
-  summarise(genres_r_count = n()) %>% 
-  ggplot(aes(movie_year, genres_r_count , color = genres)) +
-  geom_point() +
-  scale_y_continuous(trans = "log2") +
-  labs(title = "Movie year versus genders rating counts")
-
-
-# Distributions of Ratings by Genres: NOT RUN! It crash R #
-# edx_g %>% 
-  # filter(!genres == "(no genres listed)") %>% 
-  # ggplot(aes(genres, rating)) +
-  # geom_boxplot() +
-  # geom_jitter(width = 0.1, alpha = 0.2) +
-  # theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  # labs(title = "Distributions of Ratings by Genres")
-
-# Selecting and Active User ####### 
-edx_g %>% 
-  group_by(userId) %>% 
-  mutate(count = n()) %>% 
-  arrange(desc(count))
-
-user_59269 <- edx_g %>% filter(userId == 59269)
-# 6616 rated movies
-
-# Distributions of Ratings by Genres: User 59269 ######
-user_59269 %>% 
-  filter(!genres == "(no genres listed)") %>% 
-  ggplot(aes(genres, rating)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.1, alpha = 0.2) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  labs(title = "Distributions of Ratings by Genres. User 59269")
-
-# Distributions of Ratings by Genres: Sample 10% obs. ######
-
-n <- nrow(edx_g) * 0.1
-
-set.seed(1970, sample.kind="Rounding")
-
-sample_edx_g <- sample_n(edx_g, n)
-
-# Comparison between edx avg gender rating and random sample ####
-
-avg_genres_2 <- edx_g %>% 
-  group_by(genres) %>% 
-  summarise(avg_rating = mean(rating), sd = sd(rating)) %>% 
-  arrange(desc(avg_rating))
-
-avg_genres_sample <- sample_edx_g %>% 
-  group_by(genres) %>% 
-  summarise(avg_rating = mean(rating), sd = sd(rating)) %>% 
-  arrange(desc(avg_rating))
-
-edx_sample_comp <- avg_genres_2 %>% 
-  left_join(avg_genres_sample, by = 'genres') %>% 
-  filter(!genres == "(no genres listed)")
-
-edx_sample_comp
-
-# Distributions of Ratings by Genres: Ramdom Sample ######
-sample_edx_g %>% 
-  filter(!genres == "(no genres listed)") %>% 
-  ggplot(aes(genres, rating)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.1, alpha = 0.2) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  labs(title = "Distributions of Ratings by Genres. Sample")
-
-# Distribution avg rating by genres ######
-
-# Order by avg_rating
-edx_g$genres <- factor(edx_g$genres, levels = c("Film-Noir",
-                                                "Documentary",
-                                                "War",
-                                                "IMAX",
-                                                "Mystery",
-                                                "Drama",
-                                                "Crime",
-                                                "Animation",
-                                                "Musical",
-                                                "Western",
-                                                "Romance",
-                                                "Thriller",
-                                                "Fantasy",
-                                                "Adventure",
-                                                "Comedy",
-                                                "Action",
-                                                "Children",
-                                                "Sci-Fi",
-                                                "Horror"))
-
-# __Grouped by movie #####
-edx_g %>% 
-  filter(!genres == "(no genres listed)") %>%
-  group_by(movieId) %>% 
-  summarise(genres = genres, avg_rating = mean(rating)) %>% 
-  ggplot(aes(avg_rating, fill = genres)) +
-  geom_density() +
-  labs(title = "Distribution avg rating by gender, grouped by movie") +
-  facet_grid(genres ~ .)
-
-# __Grouped by user #####
-edx_g %>% 
-  filter(!genres == "(no genres listed)") %>%
-  group_by(userId) %>% 
-  summarise(genres = genres, avg_rating = mean(rating)) %>% 
-  ggplot(aes(avg_rating, fill = genres)) +
-  geom_density() +
-  labs(title = "Distribution avg rating by gender, grouped by user") +
-  facet_grid(genres ~ .)
 
 # ___________________________________########
 ##### ADDING GENRE EFFECT  ######

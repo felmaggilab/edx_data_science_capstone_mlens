@@ -7,7 +7,7 @@ output:
   html_document: default
 ---
 
-```{r packages, eval=FALSE, message=FALSE, include=FALSE}
+```{r packages, message=FALSE, include=FALSE}
 # Packages
 
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
@@ -21,7 +21,7 @@ if(!require(ggcorrplot)) install.packages("ggcorrplot", repos = "http://cran.us.
 if(!require(fastDummies)) install.packages("fastDummies", repos = "http://cran.us.r-project.org")
 ```
 
-```{r libraries, eval=FALSE, message=FALSE, include=FALSE}
+```{r libraries, message=FALSE, include=FALSE}
 # Libraries
 
 library(tidyverse)
@@ -38,14 +38,14 @@ library(ggcorrplot)
 library(fastDummies)
 ```
 
-```{r data_download, eval=FALSE, message=FALSE, include=FALSE}
+```{r data_download, message=FALSE, include=FALSE}
 # Data download #####
 
 dl <- tempfile()
 download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
 ```
 
-```{r data_wrangling, eval=FALSE, message=FALSE, include=FALSE}
+```{r data_wrangling, message=FALSE, include=FALSE}
 # Data wrangling #####
 
 ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
@@ -70,7 +70,7 @@ movies <- as.data.frame(movies) %>% mutate(movieId = as.numeric(movieId),
 movielens <- left_join(ratings, movies, by = "movieId")
 ```
 
-```{r edx_and_validation, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r edx_and_validation, message=FALSE, warning=FALSE, include=FALSE}
 # Creation of test and validation sets ######
 
 # Validation set will be 10% of MovieLens data
@@ -92,7 +92,7 @@ edx <- rbind(edx, removed)
 
 ```
 
-```{r adding_new_columns, eval=FALSE, message=FALSE, include=FALSE}
+```{r adding_new_columns, message=FALSE, include=FALSE}
 # ___________________________________########
 # ADDING NEW COLUMNS #######
 # movie_year, rating_date, rating_year ####
@@ -129,7 +129,7 @@ edx <- edx %>%
   mutate(movie_year = as.integer(movie_years_temp))
 ```
 
-```{r test_and_train, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r test_and_train, message=FALSE, warning=FALSE, include=FALSE}
 # ___________________________________########
 #### TEST SET AND TRAIN SET ########
 # ___________________________________########
@@ -284,10 +284,11 @@ Finally, and as a necessary step to analyze the effect of the film's genre accor
 
 ## 2.2 Data exploration
 
+### 2.2.1 Matrix Visualization
 Our first steps with the *recommenderlab* package focused on creating the rating matrix, and displaying it. Regardless of the use or not of the package in the final model, this allows us to visualize a sample of the data to get an idea of its nature.
 
 
-```{r matrix_creation, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r matrix_creation, message=FALSE, warning=FALSE, include=FALSE}
 # Matrix creation #######
 
 matrix_edx <- edx[1:1000000,] %>% 
@@ -298,7 +299,7 @@ rec_matrix_edx <- matrix_edx %>% as("realRatingMatrix")
 ```
 
 
-```{r matrix_visualization, eval=FALSE, fig.align='center', message=FALSE, include=FALSE}
+```{r matrix_visualization, echo=FALSE, fig.align='center', message=FALSE}
 # Matrix visualization #######
 
 image(rec_matrix_edx[1:50,1:50])
@@ -313,9 +314,10 @@ Ratings range from 0.5 to 5. With 50 movies rated by 50 users, we can already se
 
 The first two points already tell us that regularization (the penalty of estimates created from small samples) is an element that must be taken into account in the construction of the model. We will discuss the issue of regularization in more detail later.
 
+### 2.2.2 Distributions
 To verify these statements, we show here the distribution of the number of ratings per user and per film, where the variability presented by the data is clearly seen: 
 
-```{r distribution_number_ratings_user, eval=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+```{r distribution_number_ratings_user, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
 edx %>% 
   group_by(userId) %>% 
   mutate(n =  n()) %>% 
@@ -329,7 +331,7 @@ edx %>%
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
-```{r distribution_number_ratings_movie, eval=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+```{r distribution_number_ratings_movie, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
 edx %>% 
   group_by(movieId) %>% 
   mutate(n =  n()) %>% 
@@ -381,7 +383,7 @@ Points 3 and 4 do are directly related to what has been called *movie effects* (
 
 Again, we show the distribution of the data:
 
-```{r distribution_avg_rating_movie, eval=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+```{r distribution_avg_rating_movie, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
 # Distribution of avg. ratings per movie ######
 edx %>% 
   group_by(movieId) %>% 
@@ -394,7 +396,7 @@ edx %>%
 
 ```
 
-```{r distribution_avg_rating_user, eval=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+```{r distribution_avg_rating_user, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
 
 edx %>% 
   group_by(userId) %>% 
@@ -406,7 +408,7 @@ edx %>%
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
-In both cases we see approximately normal distributions, especially in the average ratings per user. As can be seen in the matrix, there are movies that tend to be rated below average, and others above average, and users who like all movies, and others who are very demanding. Clearly, both effects had to be included in the model.
+In both cases we see approximately normal distributions, especially in the average ratings per user. As can be seen in the matrix, there are movies that tend to be rated below average, and others above average, and users who like all movies, and others who are very demanding. Clearly, both effects had to be included in the model as movie and user effects ($b_i$ and $b_u$, respectively).
 
 Now the need for regularization becomes evident. If we review the list of the 10 best rated films, we will see that if we do not apply a penalty in cases where the sample is small, we get results with very few ratings. They seem to be little-known movies seen by very few people.
 
@@ -418,7 +420,7 @@ Now the need for regularization becomes evident. If we review the list of the 10
 |   42783|Shadows of Forgotten Ancestors (1964)                                            |       5.00|             1|
 |    3226|Hellhounds on My Trail (1999)                                                    |       5.00|             1|
 |   64275|Blue Light, The (Das Blaue Licht) (1932)                                         |       5.00|             1|
-|    5194|Who's Singin' Over There? (a.k.a. Who Sings Over There) (Ko to tamo peva) (1980) |       4.75|             4|
+|    5194|Who's Singin' Over There? (a.k.a. Who Sings Over There) (1980)                   |       4.75|             4|
 |   65001|Constantine's Sword (2007)                                                       |       4.75|             2|
 |   26048|Human Condition II, The (Ningen no joken II) (1959)                              |       4.75|             4|
 |   26073|Human Condition III, The (Ningen no joken III) (1961)                            |       4.75|             4|
@@ -437,6 +439,8 @@ Once the regularization is applied (in this case lambda is equal to 0.5[^7]), we
 |     922|Sunset Blvd. (a.k.a. Sunset Boulevard) (1950) |   4.315141|          2922|
 |    1212|Third Man, The (1949)                         |   4.310699|          2967|
 |    3435|Double Indemnity (1944)                       |   4.309817|          2154|
+
+[^7]: Lambda = 0.5 is model the best tune
 
 However, in the case of films with the lowest average rating, the regularization does not appear to be very effective. Without regularizing, the result shows many observations with few ratings:
 
@@ -468,12 +472,398 @@ After regularization the list shows lower average ratings, but in most cases the
 |   63828|Confessions of a Superhero (2007)                            |  0.3333333|             1|
 |    8394|Hi-Line, The (1999)                                          |  0.3333333|             1|
 
-Our hypothesis is that in general people value more frequently the movies they like. In addition, poorly rated films are generally less viewed (people are carried away by the opinion of the majority). This generates biases that are very difficult to avoid, because they are part of the data with which the model is trained. In fact, when we review the final model, we will see that it tends to overestimate ratings when movies have a low average.
+Our hypothesis is that in general people value more frequently the movies they like. In addition, poorly rated films are generally less viewed (people are carried away by the opinion of the majority). If we look again at the distribution chart of average ratings per film, we see a clear bias to the right. There are few films with average ratings below 2.5. Our final model therefore had few examples to learn from and, as we will see later, it tends to overvalue movies with low averages. 
+
+In the case of average ratings per user, the distribution is more normal, and the samples are more balanced. Even so, there are more instances with high average ratings than low ones, reinforcing the hypothesis that people tend to value something when they liked it. Not surprisingly, our final model predicts more accurate ratings in the middle range than at the extremes (especially at the low end).
+
+Below we show as an example the table with the list of the 10 users that give the highest ratings, and the 10 users that give the lowest (with the regularization applied). 
+
+| userId| avg_rating| user_ratings|
+|------:|----------:|------------:|
+|  52749|   4.970760|           85|
+|  27098|   4.960000|           87|
+|  68379|   4.955752|           56|
+|  18965|   4.949495|           49|
+|  36022|   4.928962|           91|
+|  12170|   4.928000|           62|
+|  12330|   4.924855|           86|
+|   5763|   4.923077|          214|
+|  13027|   4.915254|           29|
+|  15575|   4.915254|           29|
+|:::::::|:::::::::::|:::::::::::::|
+|  28416|  1.0188679|           26|
+|  24176|  0.9961977|          131|
+|   3457|  0.9743590|           19|
+|  24490|  0.9714286|           17|
+|   6322|  0.6857143|           17|
+|  48146|  0.4901961|           25|
+|  62815|  0.4878049|           20|
+|  63381|  0.4864865|           18|
+|  13496|  0.4857143|           17|
+|  49862|  0.4857143|           17|
 
 Although this analysis is not particularly original in its approach, it was absolutely necessary to understand the nature of the data we were working with. These results are undoubtedly to be expected, but we had to check it out. It is not good policy to take something for granted when working with unknown data sets.
 
-[^7]: Lambda = 0.5 is model the best tune
+### 2.2.3 Times trends
+### 2.2.3.1 Movie release year
+The edx dataset includes movies released between 1915 and 2008, and rated between 1995 and 2008.
+
+Although good and bad films have coexisted throughout the history of cinema, it is logical to think that if an old film is still seen and valued recently, it must have something special. Either it is really a good movie, or it has become a cult product that people value highly following the dictatorship of the majority (we can call this as the *durability effect*).
+
+Indeed, there is a clear effect of the premiere year, on the average ratings:
+
+```{r average_ratings_vs_movie_year, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+
+# Visualization of average ratings vs movie_year #####
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(avg_rating = mean(rating)) %>% 
+  ggplot(aes(movie_year, avg_rating)) +
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Average ratings vs movie_year") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+```
+
+Films released between 1930 and 1970 tend to be better rated than those released in other periods, and films released after this period, specially from, 1985 tend to receive the lowest ratings. 
+
+For example, the following table shows the 10 films released in 1940 with the most ratings:
+
+|title                              | avg_rating| ratings|
+|:----------------------------------|----------:|-------:|
+|Pinocchio (1940)                   |   3.529021|    6392|
+|Fantasia (1940)                    |   3.757268|    5951|
+|Philadelphia Story, The (1940)     |   4.216301|    3190|
+|Rebecca (1940)                     |   4.151840|    2282|
+|His Girl Friday (1940)             |   4.223314|    1883|
+|Grapes of Wrath, The (1940)        |   4.044029|    1817|
+|Great Dictator, The (1940)         |   4.060587|    1634|
+|Shop Around the Corner, The (1940) |   4.024841|     785|
+|Mark of Zorro, The (1940)          |   3.577603|     509|
+|Foreign Correspondent (1940)       |   3.892934|     467|
+
+Here we see 6 films with an average rating higher than 4, and the 10 are on the American cinema podium. In the edx dataset, there are only 40 films released in 1940, so the weight of these 10 in the calculation of the average for that year is very high. As we will see later, the Film-Noir genre, produced between 1930 and 1950, has the highest ratings, and this is clearly evident in the trend of average ratings per year.
+
+The list doesn't change much if we sort by average rating:
+
+|title                              | avg_rating| ratings|
+|:----------------------------------|----------:|-------:|
+|His Girl Friday (1940)             |   4.223314|    1883|
+|Philadelphia Story, The (1940)     |   4.216301|    3190|
+|Rebecca (1940)                     |   4.151840|    2282|
+|Great Dictator, The (1940)         |   4.060587|    1634|
+|Grapes of Wrath, The (1940)        |   4.044029|    1817|
+|Shop Around the Corner, The (1940) |   4.024841|     785|
+|Long Voyage Home, The (1940)       |   4.000000|       2|
+|Bank Dick, The (1940)              |   3.989362|     329|
+|Letter, The (1940)                 |   3.895522|      67|
+|Foreign Correspondent (1940)       |   3.892934|     467|
+
+As might be expected, there is great variability in the number of ratings per *movie_year*: from 32 for films released in 1917 (2), to around 800,000 for films released in 1995 (362). Regularization here is also necessary.
+
+| movie_year| movies_rated| ratings| ratings_per_movie|
+|----------:|------------:|-------:|-----------------:|
+|       1917|            2|      32|                16|
+|       1918|            2|      73|                36|
+|       1916|            2|      84|                42|
+|       1919|            4|     158|                40|
+|       1915|            1|     180|               180|
+|:::::::::::|:::::::::::::|::::::::|::::::::::::::::::|
+|       1993|          258|  481184|              1865|
+|       1999|          357|  489537|              1371|
+|       1996|          384|  593518|              1546|
+|       1994|          307|  671376|              2187|
+|       1995|          362|  786762|              2173|
+
+It can also be seen that the average number of ratings per film is much higher in the case of recent films. For these films, the *durability effect* is not applicable. There are movies that attract a lot of people, and that receive a lot of ratings, but that do not necessarily obtain high ratings. It is what we could call the *blockbuster effect*, which has been taking place, approximately, since the 70s.
+
+The following table shows as an example the 10 films with the highest number of ratings, released in 1995 (a year with one of the lowest average ratings):
+
+|title                              | avg_rating| ratings|
+|:----------------------------------|----------:|-------:|
+|Braveheart (1995)                  |   4.081852|   26212|
+|Apollo 13 (1995)                   |   3.885789|   24284|
+|Toy Story (1995)                   |   3.927638|   23790|
+|12 Monkeys (Twelve Monkeys) (1995) |   3.874743|   21891|
+|Usual Suspects, The (1995)         |   4.365854|   21648|
+|Seven (a.k.a. Se7en) (1995)        |   4.031239|   20311|
+|Die Hard: With a Vengeance (1995)  |   3.482470|   17655|
+|Batman Forever (1995)              |   2.920983|   17414|
+|Babe (1995)                        |   3.705654|   17031|
+|GoldenEye (1995)                   |   3.425825|   15187|
+
+
+On the list, all the movies are blockbusters. There are movies with above-average ratings (we have already seen that people tend to value what they like), but there are also relatively low-rated movies with a lot of weight: *Die Hard: With a Vengeance*, *Batman Forever* and *GoldenEye*.
+
+The trend in average ratings per year of release, therefore, could be partly explained by these two factors: 
+
+1. The aforementioned durability effect.
+2. The blockbuster effect.
+
+Both are included in the final model in combination, through the movie year effect ($b_{my}$),
+
+### 2.2.3.2 Movie rating year
+Regarding the year in which the movies are rated, a certain effect is also observed:
+
+```{r average_ratings_vs_rating_year, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+edx %>% 
+  group_by(rating_year) %>% 
+  summarise(rating_avgs = mean(rating)) %>% 
+  ggplot(aes(rating_year, rating_avgs)) +
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Average ratings vs rating_year") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+```
+
+It is not as sharp as the one from the release year, but we decided to include it in the model in the hope that it would help improve the RMSE. Indeed, once included in the model, the results improved.
+
+For this specific case, and having the timestamp of the moment in which the rating is granted, we could have worked with periods of time other than the year (weeks or months, for example). However, and guided by the available theory, we decided to approximate the smooth effect of time by working with annual periods.
+
+We must recognize that the latter is based on an assumption that this would be the best approach. However, and as an exercise once this report is finished, testing with different periods is not ruled out.
+
+The trend shows a clear difference between the average of the ratings granted in 1995, with those of other years. The following table shows the number of movies rated, the number or ratings granted per year, the average of rating per movie, aad the average rating, related with the rating year.
+
+| rating_year| movies_rated| ratings| ratings_per_movie| avg_rating|
+|-----------:|------------:|-------:|-----------------:|----------:|
+|        1995|            2|       2|                 1|       4.00|
+|    **1996**|         1385|  942772|           **681**|       3.55|
+|        1997|         1664|  414101|               249|       3.59|
+|        1998|         2261|  181634|                80|       3.51|
+|    **1999**|         3009|  709893|               236|   **3.62**|
+|    **2000**|         3810| **1144349**|           300|       3.58|
+|        2001|         4655|  683355|               147|       3.54|
+|        2002|         5676|  524959|                92|       3.47|
+|        2003|         6743|  619938|                92|       3.47|
+|        2004|         7830|  691429|                88|       3.43|
+|        2005|         8281| 1059277|               128|       3.44|
+|        2006|         8490|  689315|                81|       3.47|
+|        2007|         9162|  629168|                69|       3.47|
+|    **2008**|     **9589**|  696740|                73|       3.54|
+|        2009|         3451|   13123|                 4|       3.46|
+
+The 1995 data is clearly not significant, as it is based on just two observations.
+
+The year 1996 stands out for the average number of ratings per film. The year 1999 stands out for its average rating. The year 2000 stands out for the number of ratings. The year 2008 stands out for the number of rated films.
+
+In general, the variation in average ratings during the years with a sufficient sample is not, as we have said, very marked. In any case, we will review the data of some of the highlighted years to try to understand what produces this effect that we have called rating year ($b_{ry}$).
+
+In 1996, 1,385 films were rated, receiving an impressive average of 681 ratings each. If we review the list of the 15 most voted, we find undisputed bloksbusters. 
+
+|title                             | avg_rating| ratings|
+|:---------------------------------|----------:|-------:|
+|Batman (1989)                     |   3.258177|   12015|
+|Dances with Wolves (1990)         |   3.793890|   11523|
+|Apollo 13 (1995)                  |   3.990871|   11392|
+|Pulp Fiction (1994)               |   4.013458|   10923|
+|Fugitive, The (1993)              |   4.124415|   10899|
+|True Lies (1994)                  |   3.565101|   10837|
+|Forrest Gump (1994)               |   4.116663|    9986|
+|Batman Forever (1995)             |   3.131234|    9906|
+|Aladdin (1992)                    |   3.674006|    9856|
+|Jurassic Park (1993)              |   3.844626|    9770|
+|Ace Ventura: Pet Detective (1994) |   2.957009|    9723|
+|Clear and Present Danger (1994)   |   3.711634|    9481|
+|Die Hard: With a Vengeance (1995) |   3.484736|    9467|
+|Silence of the Lambs, The (1991)  |   4.286005|    9339|
+|Beauty and the Beast (1991)       |   3.675062|    8894|
+
+The reason these films were voted on in 1996 is not clear in all cases. Apollo 13 is easy: it was nominated for 9 Academy Awards in that year's edition. Perhaps *Forrest Gump (1994)*, took advantage of the Apollo 13 pull, because they share a protagonist (Tom Hanks). But for other movies, the reasons are not so obvious. Maybe they were re-released in theaters in 1996, or were broadcast for the first time on television.
+
+1999 is the rating year with the highest average rating. That year *Star Wars: Episode I - The Phantom Menace was released*, and the episodes of the original trilogy were re-released in theaters:
+
+|title                                                                          | avg_rating| ratings|
+|:------------------------------------------------------------------------------|----------:|-------:|
+|Star Wars: Episode V - The Empire Strikes Back (1980)                          |   4.131499|    2616|
+|Fargo (1996)                                                                   |   4.312184|    2569|
+|Shakespeare in Love (1998)                                                     |   4.170482|    2534|
+|Star Wars: Episode IV - A New Hope (a.k.a. Star Wars) (1977)                   |   4.314741|    2510|
+|Silence of the Lambs, The (1991)                                               |   4.278003|    2464|
+|Pulp Fiction (1994)                                                            |   4.240879|    2412|
+|Matrix, The (1999)                                                             |   4.102196|    2368|
+|Star Wars: Episode VI - Return of the Jedi (1983)                              |   3.900085|    2342|
+|Saving Private Ryan (1998)                                                     |   4.232135|    2309|
+|L.A. Confidential (1997)                                                       |   4.223399|    2171|
+|Raiders of the Lost Ark (Indiana Jones and the Raiders of the Lost Ark) (1981) |   4.317130|    2160|
+|Titanic (1997)                                                                 |   3.323214|    2141|
+|Forrest Gump (1994)                                                            |   3.793882|    2125|
+|Schindler's List (1993)                                                        |   4.439529|    2125|
+|Star Wars: Episode I - The Phantom Menace (1999)                               |   3.268828|    2005|
+
+This explains why there are so many ratings for Star War movies that year and, in part, the high average for that year (the original trilogy has ratings well above average). But like the previous case, it is not clear why well-rated films from other years were voted in 1999 (beyond possible reruns and the effect of television).
+
+The review of the other two years that stand out for some reason also does not give clear clues to understand this effect, which seems much more elusive than the effects related to the year the movies were released. 
+
+In 2000, 9 of the 15 films with the highest number of ratings belonged to the science fiction genre. The Star Wars trilogy takes center stage again, along with *Raiders of the Lost Ark*. The connection to Harrison Ford seems obvious:
+
+|title                                                                          | avg_rating| ratings|
+|:------------------------------------------------------------------------------|----------:|-------:|
+|American Beauty (1999)                                                         |   4.336187|    3855|
+|Star Wars: Episode IV - A New Hope (a.k.a. Star Wars) (1977)                   |   4.408192|    3540|
+|Star Wars: Episode V - The Empire Strikes Back (1980)                          |   4.241066|    3414|
+|Star Wars: Episode VI - Return of the Jedi (1983)                              |   3.972956|    3254|
+|Saving Private Ryan (1998)                                                     |   4.276757|    3158|
+|Silence of the Lambs, The (1991)                                               |   4.338983|    3127|
+|Jurassic Park (1993)                                                           |   3.715534|    3090|
+|Matrix, The (1999)                                                             |   4.290826|    3074|
+|Terminator 2: Judgment Day (1991)                                              |   4.034629|    3061|
+|Fargo (1996)                                                                   |   4.245649|    3045|
+|Raiders of the Lost Ark (Indiana Jones and the Raiders of the Lost Ark) (1981) |   4.441752|    3013|
+|Back to the Future (1985)                                                      |   3.935602|    2997|
+|Men in Black (1997)                                                            |   3.708319|    2897|
+|Shakespeare in Love (1998)                                                     |   4.065949|    2881|
+|Sixth Sense, The (1999)                                                        |   4.397431|    2881|
+
+Our hypothesis here is that this effect is much more related to latent factors such as relationships between films (actors, directors, genres, etc ...), and external factors such as television shows or promotional actions for certain films. *American Beauty*, for example, had dominated the previous year's Oscars.
+
+Given these data, the inclusion in the model of the effect of the movie's rating year responds more to the fact that it effectively contributes to reducing the Root Mean Square Error, and not so much to the possibility of explaining the reasons why it does so. Although the final model is very simple and has few similarities with more complex algorithms considered as black boxes (neural networks or gradient boosting, for example), in this particular aspect they share the need to choose between explicability and accuracy.
+
+### 2.2.4 The gender effect
+
+```{r separate_genders_by_row, message=FALSE, warning=FALSE, include=FALSE}
+# To add genre effect, we will separate geres by row (this change add more)
+# rows to the data sets (approach 1).
+
+# Separation of genres by rows  #######
+# Each combination of userId and movieId will now have as many rows as 
+# genres the movie has.
+
+edx_g <- edx %>% separate_rows(genres, sep = "\\|") # It takes some time!
+
+train_edx_g <- train_edx %>% separate_rows(genres, sep = "\\|")
+test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
+```
+
+```{r genres_table_creation, message=FALSE, warning=FALSE, include=FALSE}
+
+# Average Rating by Genres ######
+avg_genres <- edx_g %>% 
+  group_by(genres) %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  summarise(avg_rating = mean(rating)) %>% 
+  arrange(desc(avg_rating))
+
+# Number of Ratings by Genres #####
+ratings_genres <-  edx_g %>% 
+  group_by(genres) %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  summarise(ratings = n()) %>% 
+  arrange(desc(ratings))
+
+# Relation between number of ratings and average rating by gender #####
+genres_table <- avg_genres %>% 
+  left_join(ratings_genres, by = 'genres') 
+
+```
+
+Although finally the genre of the films has not been taken into account in the elaboration of the final model, it is evident that the genre is an important factor in the rating of a film. The decision to leave it out of the model responds to the fact that we were not able to treat it adequately, in a way that improved the results. However, we are aware that we must continue to experiment with this element if we want to develop a more accurate model.
+
+To explore the contribution of film genre, it is useful to separate the variable genre by row. This generate a data frame in tidy format that allows you to easily view and explore the data related to this element. However, and as we will see later, using this procedure to include the effect of genre in the model generates over sampling, since we artificially increase the available observations.
+
+If we isolate the genres, separating the multi-categorical variable by rows, it is easy to calculate the average rating of the films that include a certain genre. The following table shows the average ratings by gender calculated in this way, and the number of observations (ratings) for each genre:
+
+|genres      | avg_rating| ratings|
+|:-----------|----------:|-------:|
+|Film-Noir   |   4.011625|  118541|
+|Documentary |   3.783487|   93066|
+|War         |   3.780813|  511147|
+|IMAX        |   3.767693|    8181|
+|Mystery     |   3.677001|  568332|
+|Drama       |   3.673131| 3910127|
+|Crime       |   3.665925| 1327715|
+|Animation   |   3.600644|  467168|
+|Musical     |   3.563305|  433080|
+|Western     |   3.555918|  189394|
+|Romance     |   3.553813| 1712100|
+|Thriller    |   3.507676| 2325899|
+|Fantasy     |   3.501946|  925637|
+|Adventure   |   3.493544| 1908892|
+|Comedy      |   3.436908| 3540930|
+|Action      |   3.421405| 2560545|
+|Children    |   3.418715|  737994|
+|Sci-Fi      |   3.395743| 1341183|
+|Horror      |   3.269815|  691485|
+
+According to this table films that contain, for example, *Film-Noir* in their genre combination tend to be better rated than those that contain *Horror*.  This gives us an idea of the valuation that users give to a particular genre, although it does not serve to calculate the contribution of the combination of genres to the films. 
+
+There seems to be a certain negative correlation between the number of ratings, and the average rating, although there are clear exceptions, such as "Horror" and "Drama":
+
+```{r ratings_vs_gender_avg_rating, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+genres_table %>% 
+  ggplot(aes(ratings, avg_rating, color = genres)) +
+  geom_point(aes(color = genres), show.legend = FALSE) +
+  geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02) +
+  labs(title = "Number of ratings versus average rating by gender")
+```
+
+It is also observed that the Film-Noir, Documentary, IMAX and War genres have a higher average rating. It is feasible to say that these are niche genres, which are probably valued by users who have a positive tendency towards them.
+
+Horror movies, meanwhile, have low average ratings. In the middle we find genres that can be classified as niche (Western, Musical, Mystery), and popular such as Romance, Adventure, Thriller, Action, Comedy and Drama.
+
+The relationship between average rating and number of ratings does not seem to respond to a single factor. In some cases it seems to be due to the fact that movies of a certain genre are valued by users who like those genres. In other cases, especially when there is a high number of ratings, they seem to be popular films that attract a lot of people but whose ratings have more variability.
+
+To see this, we will compare the density of average ratings for Film-Noir versus Comedy, because they are extreme examples. Film-Noir has the highest average ratings (4.01), and is one of the genres with the fewest ratings (120,000). Comedy, meanwhile, has one of the lowest averages (3.43), but has more than 3,500,000 ratings).
+
+```{r density_film_noir_vs_comedy, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+edx_g %>% 
+  filter(genres == "Film-Noir"
+         | genres == "Comedy") %>%
+  group_by(movieId) %>% 
+  summarise(genres = genres, avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating,  fill = genres)) +
+  geom_density(alpha = 0.2) +
+  labs(title = "Density of avg rating by gender, grouped by movie: Film-Noir vs. Comedy") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+```
+
+In the previous graph, the difference in variability is clearly seen: Film-Noir is skewed to the right, and Comedy shows much higher density in means below 3. However, the huge difference in the number of ratings is not appreciated here. To see this, we will change the y-axis from density, to count:
+
+```{r count_film_noir_vs_comedy, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+edx_g %>% 
+  filter(genres == "Film-Noir"
+         | genres == "Comedy") %>%
+  group_by(movieId) %>% 
+  summarise(genres = genres, avg_rating = mean(rating)) %>% 
+  ggplot(aes(avg_rating, y = ..count..,  fill = genres)) +
+  geom_density(alpha = 0.2) +
+  labs(title = "Count of avg rating by gender, grouped by movie: Film-Noir vs. Comedy") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+```
+
+Another way to see this variability is with a box plot. Here we have filtered the data of user 559269, who has rated more than 6,600 films (probably, it is the user assigned to those responsible for the movielens site):
+
+```{r filtering_user_59269, message=FALSE, warning=FALSE, include=FALSE}
+user_59269 <- edx_g %>% filter(userId == 59269)
+```
+
+```{r ratings_by_geres_user_596269, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+user_59269 %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  ggplot(aes(genres, rating)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Ratings by Genres. User 59269") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+```
+
+It is clear that we are facing large differences, especially with regard to the number of observations. This could partly explain why the model that included the genres in the form $\sum^K_{k=1} x^k_{u,i}\beta_k$ did not yield good results. As we will see later, it is very likely that we have not correctly calculated the weights of each genre, properly applying some type of regularization.
+
+
+# 3. Modeling approach ######
 
 
 
+
+
+
+
+Lars Hulstaert, 2019: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3
 
