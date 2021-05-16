@@ -32,6 +32,8 @@ if(!require(stringr)) install.packages("stringr", repos = "http://cran.us.r-proj
 if(!require(ggalt)) install.packages("ggalt", repos = "http://cran.us.r-project.org")
 if(!require(ggcorrplot)) install.packages("ggcorrplot", repos = "http://cran.us.r-project.org")
 if(!require(fastDummies)) install.packages("fastDummies", repos = "http://cran.us.r-project.org")
+if(!require(corrplot)) install.packages("corrplot", repos = "http://cran.us.r-project.org")
+if(!require(Hmisc)) install.packages("Hmisc", repos = "http://cran.us.r-project.org")
 
 library(tidyverse)
 library(caret)
@@ -45,6 +47,8 @@ library(ggalt)
 library(scales)
 library(ggcorrplot)
 library(fastDummies)
+library(corrplot)
+library(Hmisc)
 
 # MovieLens 10M dataset:
 # https://grouplens.org/datasets/movielens/10m/
@@ -505,7 +509,7 @@ edx %>%
             ratings_per_movie = round(ratings/movies_rated)) %>% 
   arrange(ratings) %>% 
   unique() %>% 
-  # head(10) %>% 
+  head(10) %>% 
   knitr::kable()
 
 edx %>% 
@@ -514,11 +518,23 @@ edx %>%
             ratings_per_movie = round(ratings/movies_rated)) %>% 
   arrange(ratings_per_movie) %>% 
   unique() %>% 
-  # head(10) %>% 
+  tail(10) %>% 
   knitr::kable()
 
-# Number of movies per relase year #####
+# Movies per realease year ######
+edx %>% 
+  group_by(movie_year) %>% 
+  summarise(movie_year, movies_rated = length(unique(title)), ratings = n(),
+            ratings_per_movie = round(ratings/movies_rated)) %>% 
+  arrange(ratings_per_movie) %>% 
+  unique() %>% 
+  ggplot(aes(movie_year, movies_rated)) +
+  geom_line() +
+  labs(title = "Movies per realease year") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
+# Number of movies per relase year  #####
 edx %>%   
   group_by(movie_year) %>% 
   summarise(movie_year, movies = length(unique(title))) %>% 
@@ -553,6 +569,13 @@ edx %>%
   unique() %>% 
   head(10) %>% 
   knitr::kable()
+
+# __Philadelphia Story, The (1940) ########
+edx %>% 
+  filter(title == "Philadelphia Story, The (1940)") %>% 
+  summarise(rating = rating) %>% 
+  ggplot(aes(rating)) +
+  geom_histogram(color = "#999999", fill = "#0072B2")
 
 # Movies released in 1995 #####
 #__arrange by number of ratings####
@@ -593,6 +616,13 @@ edx %>%
   unique() %>% 
   tail(10) %>%
   knitr::kable()
+
+# __Batman Forever (1995) ########
+edx %>% 
+  filter(title == "Batman Forever (1995)") %>% 
+  summarise(rating = rating) %>% 
+  ggplot(aes(rating)) +
+  geom_histogram(color = "#999999", fill = "#0072B2")
 
 # Movies released in 2000 #####
 edx %>% 
@@ -926,7 +956,108 @@ edx_g %>%
   #labs(title = "Density avg rating by gender, grouped by user") +
   facet_grid(genres ~ .)
 
-?str_replace_all
+# Correlograms #######
+  
+#__grouped by rating_year #######
+  
+genre_avg_rating_r_year <- edx_g %>% 
+filter(!rating_year == "1995" & !genres == "(no genres listed)") %>% 
+group_by(rating_year, genres) %>% 
+summarise(avg_rating = mean(rating))
+  
+spread_edx_g_temp_r_y <- genre_avg_rating_r_year %>% 
+    spread(genres, avg_rating)
+  
+spread_edx_g_temp_r_y %>% 
+    knitr::kable()
+  
+spread_edx_g_r_y <- as.data.frame(spread_edx_g_temp_r_y) %>% 
+select(Action,Adventure,Animation,Children,Comedy,Crime,
+       Documentary,Drama,Fantasy,"Film-Noir",Horror,IMAX,
+       Musical,Mystery,Romance,"Sci-Fi", Thriller, War, Western)
+  
+cor_mat_r_y <- cor(spread_edx_g_r_y, method = "pearson", use = "complete.obs")
+
+corrplot(cor_mat_r_y, type = "upper", order = "alphabet", 
+         tl.col = "black", tl.srt = 45)
+
+cor_mat_r_y_2 <- rcorr(as.matrix(spread_edx_g_r_y))
+
+corrplot(cor_mat_r_y_2$r, type="upper", order="alphabet", 
+         p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
+         tl.col = "black", tl.srt = 45)
+
+# __grouped by movie_year #######
+  
+genre_avg_rating_m_year <- edx_g %>% 
+    filter(!genres == "(no genres listed)") %>% 
+    group_by(movie_year, genres) %>% 
+    summarise(avg_rating = mean(rating))
+  
+spread_edx_g_temp_m_y <- genre_avg_rating_m_year %>% 
+    spread(genres, avg_rating)
+  
+spread_edx_g_m_y <- as.data.frame(spread_edx_g_temp_m_y) %>% 
+    select(Action,Adventure,Animation,Children,Comedy,Crime,
+           Documentary,Drama,Fantasy,"Film-Noir",Horror,IMAX,
+           Musical,Mystery,Romance,"Sci-Fi", Thriller, War, Western)
+  
+cor_mat_m_y <- cor(spread_edx_g_m_y, method = "pearson", use = "complete.obs")
+  
+corrplot(cor_mat_m_y, type = "upper", order = "alphabet", 
+        tl.col = "black", tl.srt = 45)
+
+cor_mat_m_y_2 <- rcorr(as.matrix(spread_edx_g_m_y))
+
+corrplot(cor_mat_m_y_2$r, type="upper", order="alphabet", 
+         p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45)
+
+#__grouped by userId #######
+  
+genre_avg_rating_uid <- edx_g %>% 
+    filter(!genres == "(no genres listed)") %>% 
+    group_by(userId, genres) %>% 
+    summarise(avg_rating = mean(rating))
+  
+spread_edx_g_temp_uid <- genre_avg_rating_uid %>% 
+    spread(genres, avg_rating)
+  
+spread_edx_g_uid <- as.data.frame(spread_edx_g_temp_uid) %>% 
+    select(Action,Adventure,Animation,Children,Comedy,Crime,
+           Documentary,Drama,Fantasy,"Film-Noir",Horror,IMAX,
+           Musical,Mystery,Romance,"Sci-Fi", Thriller, War, Western)
+  
+cor_mat_uid <- cor(spread_edx_g_uid, method = "pearson", use = "complete.obs")
+  
+corrplot(cor_mat_uid, type = "upper", order = "alphabet", 
+           tl.col = "black", tl.srt = 45)
+
+cor_mat_uid_2 <- rcorr(as.matrix(spread_edx_g_uid))
+
+corrplot(cor_mat_uid_2$r, type="upper", order="alphabet", 
+         p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45)
+  
+##__grouped by movieId: not possible #######
+  
+genre_avg_rating_mid <- edx_g %>% 
+    filter(!genres == "(no genres listed)") %>% 
+    group_by(movieId, genres) %>% 
+    summarise(avg_rating = mean(rating))
+  
+spread_edx_g_temp_mid <- genre_avg_rating_mid %>% 
+    spread(genres, avg_rating)
+  
+spread_edx_g_mid <- as.data.frame(spread_edx_g_temp_mid) %>% 
+    select(Action,Adventure,Animation,Children,Comedy,Crime,
+           Documentary,Drama,Fantasy,"Film-Noir",Horror,IMAX,
+           Musical,Mystery,Romance,"Sci-Fi", Thriller, War, Western)
+  
+cor_mat_mid <- cor(spread_edx_g_mid, method = "pearson", use = "complete.obs")
+# Error in cor(spread_edx_g_mid, method = "pearson", use = "complete.obs") : 
+# no complete element pairs
+  
 
 # ___________________________________########
 ##### RECOMMENDERLAB: dismissed ######
