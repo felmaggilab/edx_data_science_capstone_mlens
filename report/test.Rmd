@@ -956,32 +956,64 @@ cor_mat_uid_2 <- rcorr(as.matrix(spread_edx_g_uid))
 
 The exploration of the correlation of the average rating between pairs of genders yields results that depend on the interpretation approach, and especially on the criterion of grouping the data.
 
-If the data is grouped according to the rating_year, and we show only the existing or significant correlations (significance level = 0.5), we see that in general the correlation between pairs of genders is positive, in the cases in which the data are significant (except in the case of Horror vs Film-Noir).
+If the data is grouped according to the rating_year, and we show only the existing or significant correlations (significance level = 0.05), we see that in general the correlation between pairs of genders is positive, in the cases in which the data are significant (except in the case of Horror vs Film-Noir):
 
-```{r correlogram_r_y, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
-corrplot(cor_mat_r_y_2$r, type="upper", order="alphabet", 
+```{r correlogram_r_y_alpha, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+corrplot(cor_mat_r_y_2$r, order="alphabet", 
          p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
          tl.col = "black", tl.srt = 45)
 ```
 
 Here we find, for example, close and logical relationships between Action and Sci-Fi, Animation and Musical (Disney films), Comedy and Romance, and Drama and Romance, just to name the main ones. As you might expect, the correlation is less strong between pairs like Crime and Musical, or Musical and Mystery.
 
-If the grouping criterion is the movie's release year (and again showing only the existing and significant correlations), we see different results. In this case, there seems to be some negative correlation between Documentary and Action, Drama, Fantasy and Thriller, for example. Comedy and Romance reappear positively correlated:
+If we order the matrix by hierarchical clusters, this grouping criterion seems to find a clearly differentiated group formed by "dark" films (Film-Noir, Crime and Mystery). Less obvious, although detectable, is the group of action films (Action, Sci-Fi, Adventure and Western):
 
-```{r correlogram_m_y, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
-corrplot(cor_mat_m_y_2$r, type="upper", order="alphabet", 
+```{r correlogram_r_y_hclust, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+corrplot(cor_mat_r_y_2$r, order="hclust", 
+         p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
+         tl.col = "black", tl.srt = 45)
+```
+
+If the grouping criterion is the movie's release year (and again showing only the existing and significant correlations), we see different results. In this case, there seems to be some negative correlation between Documentary and Action, Drama, Fantasy and Thriller, for example.
+
+```{r correlogram_m_y_apha, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+corrplot(cor_mat_m_y_2$r, order="alphabet", 
+         p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45)
+```
+
+Sorting by hierarchical clusters does not generate obvious or easily explainable results:
+```{r correlogram_m_y_hclusst, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+corrplot(cor_mat_m_y_2$r, order="hclust", 
          p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
          tl.col = "black", tl.srt = 45)
 ```
 
 Finally, the grouping criterion by user ID seems to be the most appropriate. First, all correlations pass the significance filter. Second, most of the correlations seem to make sense. Third, it is easy to differentiate niche genres, such as Documentary or IMAX, whose correlation with other genres is less strong, from the most popular:
 
-```{r correlogram_uid, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
-corrplot(cor_mat_uid_2$r, type="upper", order="alphabet", 
+```{r correlogram_uid_alpha, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+corrplot(cor_mat_uid_2$r,  order="alphabet", 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
          tl.col = "black", tl.srt = 45)
 
 ```
+
+If we order by hierarchical clusters, four related groups appear, which go unnoticed in other analyzes. To differentiate them, please allow us to name them:
+1. The Disney group (Musical, Animation, Children)
+2. The Black group (Film-Noir, Mystery, Crime, Thriller)
+3. The Pop Corn group (Sci-Fi, Action, Adventure, and to a lesser extent, Fantasy)
+4. The Smile and tears group (Drama, Comedy, Romance)
+
+By elimination, the genres that are left out, we could call them niche (Documentary, IMAX, War, Western and Horror). In many cases, movies that belong to these genres do not belong to others. The highly correlated groups, on the other hand, are highly correlated because many films belong to the corresponding genre combination.
+
+Outside of the correlations between groups, we see clear perfectly logical associations, as well as weak correlations where it is to be expected.
+
+```{r correlogram_uid_hcust, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+corrplot(cor_mat_uid_2$r, order="hclust", 
+         p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45)
+```
+
 
 
 # 3. Modeling approach ######
@@ -997,5 +1029,6 @@ corrplot(cor_mat_uid_2$r, type="upper", order="alphabet",
 Lars Hulstaert, 2019: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3
 http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
 https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+https://programmer.group/data-modeling-factor-analysis.html
 
 

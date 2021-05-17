@@ -956,9 +956,11 @@ edx_g %>%
   #labs(title = "Density avg rating by gender, grouped by user") +
   facet_grid(genres ~ .)
 
-# Correlograms #######
+  # ___________________________________########
+  ##### Correlograms  ######
+  # ___________________________________########
   
-#__grouped by rating_year #######
+#Grouped by rating_year #######
   
 genre_avg_rating_r_year <- edx_g %>% 
 filter(!rating_year == "1995" & !genres == "(no genres listed)") %>% 
@@ -983,11 +985,23 @@ corrplot(cor_mat_r_y, type = "upper", order = "alphabet",
 
 cor_mat_r_y_2 <- rcorr(as.matrix(spread_edx_g_r_y))
 
-corrplot(cor_mat_r_y_2$r, type="upper", order="alphabet", 
+
+#__alphabet order ######
+corrplot(cor_mat_r_y_2$r, order="alphabet", 
          p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
          tl.col = "black", tl.srt = 45)
 
-# __grouped by movie_year #######
+#__hclust order ######
+corrplot(cor_mat_r_y_2$r, order="hclust", 
+         p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
+         tl.col = "black", tl.srt = 45)
+
+#__FPC order ######
+corrplot(cor_mat_r_y_2$r, order="FPC", 
+         p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
+         tl.col = "black", tl.srt = 45)
+
+# Grouped by movie_year #######
   
 genre_avg_rating_m_year <- edx_g %>% 
     filter(!genres == "(no genres listed)") %>% 
@@ -1009,11 +1023,22 @@ corrplot(cor_mat_m_y, type = "upper", order = "alphabet",
 
 cor_mat_m_y_2 <- rcorr(as.matrix(spread_edx_g_m_y))
 
-corrplot(cor_mat_m_y_2$r, type="upper", order="alphabet", 
+#__alphabet order ######
+corrplot(cor_mat_m_y_2$r, order="alphabet", 
          p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
          tl.col = "black", tl.srt = 45)
 
-#__grouped by userId #######
+#__hclust order ######
+corrplot(cor_mat_m_y_2$r, order="hclust", 
+         p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45)
+
+#__FPC order ######
+corrplot(cor_mat_m_y_2$r, order="FPC", 
+         p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45)
+
+#Grouped by userId #######
   
 genre_avg_rating_uid <- edx_g %>% 
     filter(!genres == "(no genres listed)") %>% 
@@ -1035,11 +1060,31 @@ corrplot(cor_mat_uid, type = "upper", order = "alphabet",
 
 cor_mat_uid_2 <- rcorr(as.matrix(spread_edx_g_uid))
 
-corrplot(cor_mat_uid_2$r, type="upper", order="alphabet", 
+#__alphabet order ######
+corrplot(cor_mat_uid_2$r, order="alphabet", 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
          tl.col = "black", tl.srt = 45)
+
+#__hclust order ######
+corrplot(cor_mat_uid_2$r, order="hclust", 
+         p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45)
+
+#__FPC order ######
+corrplot(cor_mat_uid_2$r, order="FPC", 
+         p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45)
+
+#__Principal component analysis ######
+
+#Data scaling
+cor_mat_uid_2.sc <- scale(cor_mat_uid_2$r)
+#Extraction of Principal Components
+cor_mat_uid_2.pc <- prcomp(cor_mat_uid_2.sc)
+#Judging the number of components
+plot(cor_mat_uid_2.pc, type = "l")
   
-##__grouped by movieId: not possible #######
+# Grouped by movieId: not possible #####
   
 genre_avg_rating_mid <- edx_g %>% 
     filter(!genres == "(no genres listed)") %>% 
