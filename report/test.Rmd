@@ -239,7 +239,6 @@ The final model, however, does not incorporate the genre effect in either way. T
 [^5]: https://cran.rstudio.com/web/packages/recommenderlab/recommenderlab.pdf
 [^6]: https://rafalab.github.io/dsbook/large-datasets.html#factor-analysis    
 
-
 # 2. Methods and Analysis
 
 ## 2.1 Data wrangling
@@ -332,7 +331,7 @@ edx %>%
   geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
   scale_x_continuous(trans = "log10") +
   labs(title = "Distribution of number of ratings by user") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
@@ -346,7 +345,7 @@ edx %>%
   geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
   scale_x_continuous(trans = "log2") +
   labs(title = "Distribuion of number of ratings by movie") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
 ```
@@ -396,7 +395,7 @@ edx %>%
   ggplot(aes(avg_rating)) +
   geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
   labs(title = "Distribution of avg. ratings per movie") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
 ```
@@ -409,7 +408,7 @@ edx %>%
   ggplot(aes(avg_rating)) +
   geom_histogram(bins = 100, color = "#999999", fill = "#0072B2") +
   labs(title = "Distribution of avg. ratings per user") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
@@ -507,7 +506,7 @@ Below we show as an example the table with the list of the 10 users that give th
 |  13496|  0.4857143|           17|
 |  49862|  0.4857143|           17|
 
-Although this analysis is not particularly original in its approach, it was absolutely necessary to understand the nature of the data we were working with. These results are undoubtedly to be expected, but we had to check it out. It is not good policy to take something for granted when working with unknown data sets.
+Although this analysis is not particularly original in its approach, it was absolutely necessary to understand the nature of the data we were working with. These results are undoubtedly to be expected, but we had to check it out.
 
 ### 2.2.3 Times trends
 ### 2.2.3.1 Movie release year
@@ -527,7 +526,7 @@ edx %>%
   geom_point() +
   geom_smooth() +
   labs(title = "Average ratings vs movie_year") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
@@ -546,7 +545,7 @@ edx %>%
   ggplot(aes(movie_year, movies_rated)) +
   geom_line() +
   labs(title = "Movies per realease year") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
@@ -630,16 +629,21 @@ edx %>%
   filter(title == "Philadelphia Story, The (1940)") %>% 
   summarise(rating = rating) %>% 
   ggplot(aes(rating)) +
-  geom_histogram(color = "#999999", fill = "#0072B2")
+  geom_histogram(color = "#999999", fill = "#0072B2") +
+  labs(title = "Distibution of ratings: Philadelphia Story, The (1940)") +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
 ```{r batman_forever_1995, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
-# __Batman Forever (1995) ########
 edx %>% 
   filter(title == "Batman Forever (1995)") %>% 
   summarise(rating = rating) %>% 
   ggplot(aes(rating)) +
-  geom_histogram(color = "#999999", fill = "#0072B2")
+  geom_histogram(color = "#999999", fill = "#0072B2") +
+  labs(title = "Distibution of ratings: Batman Forever (1995)") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
 Both effects are included in the final model in combination, through the movie year effect ($b_{my}$),
@@ -655,7 +659,7 @@ edx %>%
   geom_point() +
   geom_smooth() +
   labs(title = "Average ratings vs rating_year") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
 ```
@@ -765,7 +769,7 @@ Given these data, the inclusion in the model of the effect of the movie's rating
 ### 2.2.4 The genre effect
 #### 2.2.4.1 Average ratings and number of ratings by genres
 
-```{r separate_genders_by_row, message=FALSE, warning=FALSE, include=FALSE}
+```{r separate_genders_by_row, echo=FALSE, message=FALSE, warning=FALSE}
 # To add genre effect, we will separate geres by row (this change add more)
 # rows to the data sets (approach 1).
 
@@ -779,7 +783,7 @@ train_edx_g <- train_edx %>% separate_rows(genres, sep = "\\|")
 test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
 ```
 
-```{r genres_table_creation, message=FALSE, warning=FALSE, include=FALSE}
+```{r genres_table_creation, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Average Rating by Genres ######
 avg_genres <- edx_g %>% 
@@ -838,7 +842,9 @@ genres_table %>%
   ggplot(aes(ratings, avg_rating, color = genres)) +
   geom_point(aes(color = genres), show.legend = FALSE) +
   geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02) +
-  labs(title = "Number of ratings versus average rating by gender")
+  labs(title = "Number of ratings versus average rating by gender") +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
 It is also observed that the Film-Noir, Documentary, IMAX and War genres have a higher average rating. It is feasible to say that these are niche genres that are rarely valued, by users who probably have a positive tendency towards them.
@@ -858,7 +864,7 @@ edx_g %>%
   ggplot(aes(avg_rating,  fill = genres)) +
   geom_density(alpha = 0.2) +
   labs(title = "Density of avg rating by gender, grouped by movie: Film-Noir vs. Comedy") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
@@ -873,7 +879,7 @@ edx_g %>%
   ggplot(aes(avg_rating, y = ..count..,  fill = genres)) +
   geom_density(alpha = 0.2) +
   labs(title = "Count of avg rating by gender, grouped by movie: Film-Noir vs. Comedy") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
@@ -891,7 +897,7 @@ user_59269 %>%
   geom_jitter(width = 0.1, alpha = 0.2) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(title = "Ratings by Genres. User 59269") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
 ```
@@ -956,67 +962,160 @@ cor_mat_uid_2 <- rcorr(as.matrix(spread_edx_g_uid))
 
 The exploration of the correlation of the average rating between pairs of genders yields results that depend on the interpretation approach, and especially on the criterion of grouping the data.
 
-If the data is grouped according to the rating_year, and we show only the existing or significant correlations (significance level = 0.05), we see that in general the correlation between pairs of genders is positive, in the cases in which the data are significant (except in the case of Horror vs Film-Noir):
+**Rating year criterion**  
+If the data is grouped according to the rating year, and we show only the existing or significant correlations (significance level = 0.05), we see that in general the correlation between pairs of genders is positive, in the cases in which the data are significant (except in the case of Horror vs Film-Noir):
 
-```{r correlogram_r_y_alpha, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+```{r correlogram_r_y_alpha, echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, out.width='60%'}
 corrplot(cor_mat_r_y_2$r, order="alphabet", 
          p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by Rating year (alphabet)",
+         mar=c(0,0,1,0))
 ```
 
 Here we find, for example, close and logical relationships between Action and Sci-Fi, Animation and Musical (Disney films), Comedy and Romance, and Drama and Romance, just to name the main ones. As you might expect, the correlation is less strong between pairs like Crime and Musical, or Musical and Mystery.
 
 If we order the matrix by hierarchical clusters, this grouping criterion seems to find a clearly differentiated group formed by "dark" films (Film-Noir, Crime and Mystery). Less obvious, although detectable, is the group of action films (Action, Sci-Fi, Adventure and Western):
 
-```{r correlogram_r_y_hclust, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+```{r correlogram_r_y_hclust, echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, out.width='60%'}
 corrplot(cor_mat_r_y_2$r, order="hclust", 
          p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by Rating year (hclust)",
+         mar=c(0,0,1,0))
 ```
 
+**Release year criterion**  
 If the grouping criterion is the movie's release year (and again showing only the existing and significant correlations), we see different results. In this case, there seems to be some negative correlation between Documentary and Action, Drama, Fantasy and Thriller, for example.
 
-```{r correlogram_m_y_apha, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+```{r correlogram_m_y_apha, echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, out.width='60%'}
 corrplot(cor_mat_m_y_2$r, order="alphabet", 
          p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by Movie year (alphabet)",
+         mar=c(0,0,1,0))
 ```
 
 Sorting by hierarchical clusters does not generate obvious or easily explainable results:
-```{r correlogram_m_y_hclusst, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+
+```{r correlogram_m_y_hclusst, echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, out.width='60%'}
 corrplot(cor_mat_m_y_2$r, order="hclust", 
          p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by Movie year (hclust)",
+         mar=c(0,0,1,0))
 ```
 
-Finally, the grouping criterion by user ID seems to be the most appropriate. First, all correlations pass the significance filter. Second, most of the correlations seem to make sense. Third, it is easy to differentiate niche genres, such as Documentary or IMAX, whose correlation with other genres is less strong, from the most popular:
+**User ID criterion**  
+Finally, the grouping criterion by user ID seems to be the most appropriate. First, all correlations pass the significance filter. Second, most of the strong correlations seem to make sense. Third, it is easy to differentiate niche genres, such as Documentary or IMAX, whose correlation with other genres is less strong, from the most popular:
 
-```{r correlogram_uid_alpha, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
-corrplot(cor_mat_uid_2$r,  order="alphabet", 
+```{r correlogram_uid_alpha, echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, out.width='60%'}
+corrplot(cor_mat_uid_2$r, order="alphabet", 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (alphabet)",
+         mar=c(0,0,1,0))
 
 ```
 
-If we order by hierarchical clusters, four related groups appear, which go unnoticed in other analyzes. To differentiate them, please allow us to name them:
+If we order by hierarchical clusters, four logical groups appear, which go unnoticed in other analyzes. To differentiate them, please allow us to name them:  
+
 1. The Disney group (Musical, Animation, Children)
 2. The Black group (Film-Noir, Mystery, Crime, Thriller)
-3. The Pop Corn group (Sci-Fi, Action, Adventure, and to a lesser extent, Fantasy)
-4. The Smile and tears group (Drama, Comedy, Romance)
+3. The Pop Corn group (Sci-Fi, Action, Adventure)
+4. The Smile and tears group (Fantasy, Drama, Comedy, Romance)  
 
-By elimination, the genres that are left out, we could call them niche (Documentary, IMAX, War, Western and Horror). In many cases, movies that belong to these genres do not belong to others. The highly correlated groups, on the other hand, are highly correlated because many films belong to the corresponding genre combination.
-
-Outside of the correlations between groups, we see clear perfectly logical associations, as well as weak correlations where it is to be expected.
-
-```{r correlogram_uid_hcust, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
-corrplot(cor_mat_uid_2$r, order="hclust", 
+```{r correlogram_uid_hcust, echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, out.width='60%'}
+corrplot(cor_mat_uid_2$r, order="hclust", addrect = 9, 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (hclust)",
+         mar=c(0,0,1,0))
+```
+
+By elimination, the genres that are left out, we could call them niche (Documentary, IMAX, War, Western and Horror). 
+
+Outside of the correlations between groups, we see clear perfectly logical associations (Action-Thriller, for example), as well as weak correlations where it is to be expected (Musical-Horror).
+
+It is important to correctly interpret these groups. As all the correlations are positive and only the strength of the correlation changes, what the data tells us is that if a user gives a high or low rating to one gender, they will also give a high or low rating to the other. For example, the Disney Group shows a close correlation between Animation and Children, which tells us that those who do not like animated films do not enjoy children's films either. On the contrary, those who like animated films also enjoy children's movies.
+
+OJO:::: REVISAR
+
+The problem here is that strong correlations between genres can occur because many movies feature such a combination of genres, or because users who like (or don't like) genre A really also like genre B (or not). On the other hand, the weak correlations in general seem to be due to the fact that few films present certain combinations of genres (Musical-Horror or Animation-Film Noir, for example).
+
+Therefore, we find a situation in which we have:    
+1. strong correlations by genres association, that is not very informative,
+3. real correlations between movie genres,
+2. weak correlations, which are due to the fact that there are few examples in the data.  
+
+Additionally, since the data grouped by user does not show negative correlations, we cannot use this criterion to establish rules such as "if genre A is preferred, genre B is not preferred".
+
+This leads us again to the fact that we have not been able to correctly calculate the real weight of each movie genre, in the model that incorporates the expression $\sum^K_{k=1} x^k_{u,i}\beta_k$
+
+# 3. Modeling approach ######
+
+Our model does not differ much from the one developed in the course documentation, although it includes the time trends represented by the effects of the year the movies were released, and the year of rating. On the other hand, if it does not include the effect of the genre of the films, it is because its inclusion did not improve the results.
+
+It is a linear model capable of working with the complete edx dataset. The advantage of this approach is that despite being a very large dataset, it keeps the calculation times within reasonable ranges. The downside is that both user and time effects are approximate, and the model does not capture the non-linear nature of latent factors. Despite these disadvantages, the model yields an RMSE in line with the primary objective: to be below 0.86490.
+
+The different elements of the model were added one by one, with the aim of knowing exactly the contribution of each one of them. By way of experimentation, we start with a naive model that predicts in all cases the average ratings of all films.
+
+We are aware that this first step, as well as the addition of the movie and user effects, does not add anything new nor is it an original approach. However, it is completely necessary if we want to develop a linear model.
+
+To summarize, below we show the code by which the model that incorporates the average rating and the movie and user effects is built:
+
+$$Y_{u,i} = mu + b_i + b_u + \epsilon_{u,i}$$
+
+```{r mu_bi_bu_model, echo=TRUE}
+
+mu <- mean(train_edx$rating)
+
+b_i <- train_edx %>%
+  group_by(movieId) %>%
+  summarize(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- train_edx %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+reg_movie_user_effect_pred <- 
+  test_edx %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  mutate(pred = mu + b_i + b_u) %>%
+  .$pred
+  
+```
+
+In this case, the best tune lambda is equal to 0.5. The following graph shows the results of the process to find that best tune:
+
+```{r lamda_best_tune_1, echo=FALSE}
+
+lambdas <- seq(0, 10, 0.25)
+
+rmses <- sapply(lambdas, function(l){
+  
+  mu <- mean(train_edx$rating)
+  
+  b_i <- train_edx %>%
+    group_by(movieId) %>%
+    summarize(b_i = sum(rating - mu)/(n()+l))
+  
+  b_u <- train_edx %>% 
+    left_join(b_i, by="movieId") %>%
+    group_by(userId) %>%
+    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+  
+  predicted_ratings <- 
+    train_edx %>% 
+    left_join(b_i, by = "movieId") %>%
+    left_join(b_u, by = "userId") %>%
+    mutate(pred = mu + b_i + b_u) %>%
+    .$pred
+  
+  return(RMSE(predicted_ratings, train_edx$rating))
+})
+
+qplot(lambdas, rmses) 
+
 ```
 
 
-
-# 3. Modeling approach ######
 
 
 
@@ -1030,5 +1129,7 @@ Lars Hulstaert, 2019: https://towardsdatascience.com/machine-learning-interpreta
 http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
 https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
 https://programmer.group/data-modeling-factor-analysis.html
+https://stackoverflow.com/questions/40509217/how-to-have-r-corrplot-title-position-correct
+https://cran.r-project.org/web/packages/corrplot/corrplot.pdf
 
 

@@ -463,6 +463,7 @@ edx %>%
   unique() %>% 
   head(10) %>% 
   knitr::kable()
+# NOTE: here we use lambda 0.5 (final model best tune)
 
 # The 10 users with the lowest average rating #####
 # __Not regularized ####
@@ -484,6 +485,7 @@ edx %>%
   unique() %>% 
   tail(10) %>% 
   knitr::kable()
+# NOTE: here we use lambda 0.5 (final model best tune)
 
 edx %>% arrange(movie_year)
 # Films from 1915 to 2008
@@ -575,7 +577,10 @@ edx %>%
   filter(title == "Philadelphia Story, The (1940)") %>% 
   summarise(rating = rating) %>% 
   ggplot(aes(rating)) +
-  geom_histogram(color = "#999999", fill = "#0072B2")
+  geom_histogram(color = "#999999", fill = "#0072B2") +
+  labs(title = "Distibution of ratings: Philadelphia Story, The (1940)") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
 # Movies released in 1995 #####
 #__arrange by number of ratings####
@@ -622,7 +627,10 @@ edx %>%
   filter(title == "Batman Forever (1995)") %>% 
   summarise(rating = rating) %>% 
   ggplot(aes(rating)) +
-  geom_histogram(color = "#999999", fill = "#0072B2")
+  geom_histogram(color = "#999999", fill = "#0072B2") +
+  labs(title = "Distibution of ratings: Batman Forever (1995)") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
 # Movies released in 2000 #####
 edx %>% 
@@ -787,7 +795,14 @@ genres_table %>%
   #size=2, 
   #expand=0.07) +
   geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02) +
-  labs(title = "Number of ratings versus average rating by gender")
+  labs(title = "Number of ratings versus average rating by gender") +
+  genres_table %>% 
+  ggplot(aes(ratings, avg_rating, color = genres)) +
+  geom_point(aes(color = genres), show.legend = FALSE) +
+  geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02) +
+  labs(title = "Number of ratings versus average rating by gender") +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
 # Movie year versus genders rating counts ######
 
@@ -956,9 +971,9 @@ edx_g %>%
   #labs(title = "Density avg rating by gender, grouped by user") +
   facet_grid(genres ~ .)
 
-  # ___________________________________########
-  ##### Correlograms  ######
-  # ___________________________________########
+# ___________________________________########
+##### Correlograms  ######
+# ___________________________________########
   
 #Grouped by rating_year #######
   
@@ -985,21 +1000,22 @@ corrplot(cor_mat_r_y, type = "upper", order = "alphabet",
 
 cor_mat_r_y_2 <- rcorr(as.matrix(spread_edx_g_r_y))
 
-
 #__alphabet order ######
 corrplot(cor_mat_r_y_2$r, order="alphabet", 
          p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by Rating year (alphabet)",
+         mar=c(0,0,1,0))
 
 #__hclust order ######
-corrplot(cor_mat_r_y_2$r, order="hclust", 
+corrplot(cor_mat_r_y_2$r, order="hclust", addrect = 5, 
          p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by Rating year (hclust)",
+         mar=c(0,0,1,0))
 
 #__FPC order ######
 corrplot(cor_mat_r_y_2$r, order="FPC", 
          p.mat = cor_mat_r_y_2$P, sig.level = 0.05, insig = "blank", 
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6)
 
 # Grouped by movie_year #######
   
@@ -1019,24 +1035,26 @@ spread_edx_g_m_y <- as.data.frame(spread_edx_g_temp_m_y) %>%
 cor_mat_m_y <- cor(spread_edx_g_m_y, method = "pearson", use = "complete.obs")
   
 corrplot(cor_mat_m_y, type = "upper", order = "alphabet", 
-        tl.col = "black", tl.srt = 45)
+        tl.col = "black", tl.srt = 45, tl.cex = 0.6)
 
 cor_mat_m_y_2 <- rcorr(as.matrix(spread_edx_g_m_y))
 
 #__alphabet order ######
 corrplot(cor_mat_m_y_2$r, order="alphabet", 
          p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by Movie year (alphabet)",
+         mar=c(0,0,1,0))
 
 #__hclust order ######
-corrplot(cor_mat_m_y_2$r, order="hclust", 
+corrplot(cor_mat_m_y_2$r, order="hclust", addrect = 4, 
          p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by Movie year (hclust)",
+         mar=c(0,0,1,0))
 
 #__FPC order ######
 corrplot(cor_mat_m_y_2$r, order="FPC", 
          p.mat = cor_mat_m_y_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6)
 
 #Grouped by userId #######
   
@@ -1063,24 +1081,43 @@ cor_mat_uid_2 <- rcorr(as.matrix(spread_edx_g_uid))
 #__alphabet order ######
 corrplot(cor_mat_uid_2$r, order="alphabet", 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (alphabet)",
+         mar=c(0,0,1,0))
 
 #__hclust order ######
-corrplot(cor_mat_uid_2$r, order="hclust", 
+corrplot(cor_mat_uid_2$r, order="hclust", addrect = 9, 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (hclust)",
+         mar=c(0,0,1,0))
+
+#__hclust.method order ######
+corrplot(cor_mat_uid_2$r, order="hclust",  hclust.method = "centroid",
+         p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (hclust)",
+         mar=c(0,0,1,0))
+
+#__AOE order ######
+corrplot(cor_mat_uid_2$r, order="AOE", 
+         p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (hclust)",
+         mar=c(0,0,1,0))
 
 #__FPC order ######
 corrplot(cor_mat_uid_2$r, order="FPC", 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (FPC)",
+         mar=c(0,0,1,0))
+
+
 
 #__Principal component analysis ######
+# Not included in Report!
 
 #Data scaling
 cor_mat_uid_2.sc <- scale(cor_mat_uid_2$r)
 #Extraction of Principal Components
 cor_mat_uid_2.pc <- prcomp(cor_mat_uid_2.sc)
+summary(cor_mat_uid_2.pc)
 #Judging the number of components
 plot(cor_mat_uid_2.pc, type = "l")
   
@@ -1102,7 +1139,23 @@ spread_edx_g_mid <- as.data.frame(spread_edx_g_temp_mid) %>%
 cor_mat_mid <- cor(spread_edx_g_mid, method = "pearson", use = "complete.obs")
 # Error in cor(spread_edx_g_mid, method = "pearson", use = "complete.obs") : 
 # no complete element pairs
-  
+
+edx_g %>% filter(genres == "Musical" |
+                genres == "Horror") %>% 
+select(title, genres) %>% 
+group_by(title)
+
+edx_g %>% filter(genres == "Film-Noir" |
+                   genres == "Mystery" |
+                   genres == "Crime" |
+                   genres == "Thriller") %>% 
+  head(30) %>% 
+  knitr::kable()
+
+edx_g %>% filter(title == "Outbreak (1995)") %>% 
+  head(30) %>% 
+  knitr::kable()
+
 
 # ___________________________________########
 ##### RECOMMENDERLAB: dismissed ######
@@ -1326,8 +1379,6 @@ reg_movie_user_effect_pred <-
   left_join(b_u, by = "userId") %>%
   mutate(pred = mu + b_i + b_u) %>%
   .$pred
-
-str(reg_movie_user_effect_pred)
 
 # __Regularized Movie + User Effects #####
 
