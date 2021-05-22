@@ -163,11 +163,11 @@ test_edx <- test_edx %>%
 This report explains the process of building a linear model for movie ratings prediction, through which an RMSE of 0.8648047 is achieved. The final model takes into account movie effects ($b_i$), user effects ($b_u$), movie year effects ($b_{my}$), and rating year effects ($b_{ry}$), and its expression is:
 $$Y_{u,i} = mu + b_i + b_u + b_{my} + b_{ry} + \epsilon_{u,i}$$
 
-During model development, we experimented with the genre effect in two different ways. The first approach was to separate the movie genres by row, and add them to the model in the same way that the movie, user, release year, and rating year effects were added: $Y_{u,i} = mu + b_i + b_u + b_{my} + b_{ry} + b_g + \epsilon_{u,i}$
+During model development, we experimented with the genre effect in two different ways. The first approach was to separate the movie genres by row, and add them to the model in the same way that the movie, user, release year, and rating year effects were added: $Y_{u,i} = \frac{1}{n}\sum\left(mu + b_i + b_u + b_{my} + b_{ry} + b_g \right) + \epsilon_{u,i}$
 
 With this model we get an RMSE on the test data set of 0.8630654. This RMSE was by far the best of all those obtained on the test data set. However, it involves adding observations, and we prefer to present a final solution in which the number of observations is not altered.
 
-The second approach was to add the gender effect using dummy variables with values 0 or 1 for each gender. In this way, no observations (rows) are added, but columns, in order to multiply the weight ($\beta$) of each gender by the value of the dummy variable. This model presents the following expression: $Y_{u,i} = mu + b_i + b_u + \sum^K_{k=1} x^k_{u,i}\beta_k + \epsilon_{u,i},$ with $x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$. 
+The second approach was to add the gender effect using dummy variables with values 0 or 1 for each gender. In this way, no observations (rows) are added, but columns, in order to multiply the weight ($\beta$) of each gender by the value of the dummy variable. This model presents the following expression: $Y_{u,i} = mu + b_i + b_u + \sum^K_{k=1} x^k_{u,i}\beta_k + \epsilon_{u,i}$, with $x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$. 
 
 In this case, the RMSE obtained on the test set was 0.8874411. This result turned out to be worse than that obtained with a simple model that only took into account the film and user effects. Being a linear model, nothing, except changing the way in which the weights of each genre were calculated, was going to improve the result more than to eliminate the genre effect completely. After several tests, without finding an optimal way to calculate these weights, we decided to go for the simplest final model, which does not take into account the movie genres, but does not add observations in the original data sets.
 
@@ -642,7 +642,7 @@ edx %>%
   ggplot(aes(rating)) +
   geom_histogram(color = "#999999", fill = "#0072B2") +
   labs(title = "Distibution of ratings: Batman Forever (1995)") +
-  theme(plot.title = element_text(size = 10, face = "bold")) +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
@@ -769,9 +769,7 @@ Given these data, the inclusion in the model of the effect of the movie's rating
 ### 2.2.4 The genre effect
 #### 2.2.4.1 Average ratings and number of ratings by genres
 
-```{r separate_genders_by_row, echo=FALSE, message=FALSE, warning=FALSE}
-# To add genre effect, we will separate geres by row (this change add more)
-# rows to the data sets (approach 1).
+```{r separate_genders_by_row, echo=TRUE, message=FALSE, warning=FALSE}
 
 # Separation of genres by rows  #######
 # Each combination of userId and movieId will now have as many rows as 
@@ -1046,45 +1044,96 @@ Additionally, since the data grouped by user does not show negative correlations
 
 This leads us again to the fact that we have not been able to correctly calculate the real weight of each movie genre, in the model that incorporates the expression $\sum^K_{k=1} x^k_{u,i}\beta_k$
 
-# 3. Modeling approach ######
+# 3. Modeling approach
 
-Our model does not differ much from the one developed in the course documentation, although it includes the time trends represented by the effects of the year the movies were released, and the year of rating. On the other hand, if it does not include the effect of the genre of the films, it is because its inclusion did not improve the results.
+## 3.1 Tests with *recommenderlab*
+In order to present completely different approaches to those included in the course documentation, we tested with the *recommenderlab* package. This package is a framework for working and evaluating models of the Collaborative Filtering type. 
 
-It is a linear model capable of working with the complete edx dataset. The advantage of this approach is that despite being a very large dataset, it keeps the calculation times within reasonable ranges. The downside is that both user and time effects are approximate, and the model does not capture the non-linear nature of latent factors. Despite these disadvantages, the model yields an RMSE in line with the primary objective: to be below 0.86490.
+The idea Behind Collaborative Filtering models *is that given rating data by many users for many items (e.g., 1 to 5 stars for movies elicited directly from the users), one can predict a user’s rating for an item not known to her or him (see, e.g., Goldberg, Nichols, Oki, and Terry 1992) or create for a user a so called top-N lists of recommended items (see, e.g., Deshpande and Karypis 2004). The premise is that users who agreed on the rating for some items typically also agree on the rating for other items* (Hahsler).
+
+To work with recommenderlab, we must first create a rating matrix, selecting the variables *userId*, *movieId* and *rating*. Additionally, it is advisable to clean the matrix by filtering the films with less than a certain number of ratings, *so as not to introduce too much noise in the model*  (Alegría, 2020).
+
+```{r creating_rating_matrix, echo=TRUE}
+
+edx_recom <- edx %>% 
+  select(userId, movieId, rating)
+
+edx_ui <- edx_recom %>% as("realRatingMatrix")
+
+edx_ui <- edx_ui[,colCounts(edx_ui)>= 10]
+```
+
+Once the matrix is created, applying the package is relatively straightforward. The steps are:
+
+1. Create the evaluation scheme
+2. Create the training and test sets
+3. Train selected models
+4. Make predictions
+5. Calculate the error
+
+In our case, we carried out tests with the following models:
+
+1. User Base Collaborative Filtering
+2. Item Base Collaborative Filtering
+3. Singular Value Decomposition
+
+Below we show the code as an example (commented, to avoid its execution):
+
+```{r recomenderlab_exmple_commented, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Evaluation shceme ####
+
+# eval_scheme <- evaluationScheme(edx_ui, method = "split", train = 0.9, given = 5)
+
+# Train and Test Sets ######
+
+# train <- eval_scheme %>% getData("train")
+# known <- eval_scheme %>% getData("known")
+# unknown <- eval_scheme %>% getData("unknown")
+
+# Training Models ######
+
+# ubcf_model <- Recommender(train, "UBCF")
+# ibcf_model <- Recommender(train, "IBCF")
+# svd_model <- Recommender(train, "SVD")
+
+# Predictions #####
+
+# ubcf_pred <- predict(ubcf_model, known, type = "ratings")
+# ibcf_pred <- predict(ibcf_model, known, type = "ratings")
+# svd_pred <- predict(svd_model, known, type = "ratings")
+
+# Error ######
+
+# error_calc <- rbind("ubcf" = calcPredictionAccuracy(ubcf_pred, unknown),
+              # "ibcf" = calcPredictionAccuracy(ibcf_pred, unknown),
+              # "svd" = calcPredictionAccuracy(svd_pred, unknown))
+
+# error_calc
+```
+
+As we have already discussed in the introduction, we decided to abandon this approach mainly due to the required calculation times. Although, to be totally honest, we must recognize that we would not have been able to select certain parameters correctly, nor explain the results. Nor did we find in the documentation examples with results that were close to the RMSE objectives pursued. Finally, we were unable to determine, through the available documentation, how to add the results of these models to a larger model, and apply the predictions on the validation test when the time came.
+
+These considerations eventually convinced us that it was preferable to adopt a conceptually simpler approach, although more complex in terms of coding (the final model does not come from a package).
+
+## 3.2 Building The Final Model
+Our final model does not differ much from the one developed in the course documentation, although it includes the time trends represented by the effects of the year the movies were released, and the year of rating. On the other hand, if it does not include the effect of the genre of the films, it is because its inclusion did not improve the results.
+
+It is a linear model capable of working with the complete *edx* dataset. The advantage of this approach is that despite being a very large dataset, it keeps the calculation times within reasonable ranges. Another important advantage is that the model is relatively easy to explain. 
+
+The downside is that both user and time effects are approximate, and the model does not capture the non-linear nature of latent factors. Despite these disadvantages, the model yields an RMSE in line with the primary objective: to be below 0.86490, once applied to the validation set.
 
 The different elements of the model were added one by one, with the aim of knowing exactly the contribution of each one of them. By way of experimentation, we start with a naive model that predicts in all cases the average ratings of all films.
 
 We are aware that this first step, as well as the addition of the movie and user effects, does not add anything new nor is it an original approach. However, it is completely necessary if we want to develop a linear model.
 
-To summarize, below we show the code by which the model that incorporates the average rating and the movie and user effects is built:
+To summarize, below we show the code by which the final model was built:
 
-$$Y_{u,i} = mu + b_i + b_u + \epsilon_{u,i}$$
+$$Y_{u,i} = mu + b_i + b_u + b_{my} + b_{ry} + \epsilon_{u,i}$$
+**Searching for Lambda Best Tune**  
+Exploratory data analysis showed that regularization is necessary to correctly add movie, user and time effects to the model. Next we show the code that allows us to determine the lambda value that yields the lowest RMSE. It is important to note that to find the value of lambda, we do not use the test set:
 
-```{r mu_bi_bu_model, echo=TRUE}
-
-mu <- mean(train_edx$rating)
-
-b_i <- train_edx %>%
-  group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+lambda))
-
-b_u <- train_edx %>% 
-  left_join(b_i, by="movieId") %>%
-  group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
-
-reg_movie_user_effect_pred <- 
-  test_edx %>% 
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  mutate(pred = mu + b_i + b_u) %>%
-  .$pred
-  
-```
-
-In this case, the best tune lambda is equal to 0.5. The following graph shows the results of the process to find that best tune:
-
-```{r lamda_best_tune_1, echo=FALSE}
+```{r lamda_best_tune_1, echo=TRUE, message=FALSE, warning=FALSE}
 
 lambdas <- seq(0, 10, 0.25)
 
@@ -1094,27 +1143,243 @@ rmses <- sapply(lambdas, function(l){
   
   b_i <- train_edx %>%
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarise(b_i = sum(rating - mu)/(n()+l))
   
   b_u <- train_edx %>% 
     left_join(b_i, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarise(b_u = sum(rating - b_i - mu)/(n()+l))
+  
+  b_my <- train_edx %>% 
+    left_join(b_i, by = 'movieId') %>% 
+    left_join(b_u, by = 'userId') %>% 
+    group_by(movie_year) %>% 
+    summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+l))
+  
+  b_ry <- train_edx %>% 
+    left_join(b_i, by = 'movieId') %>% 
+    left_join(b_u, by = 'userId') %>% 
+    left_join(b_my, by = 'movie_year') %>% 
+    group_by(rating_year) %>% 
+    summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+l))
   
   predicted_ratings <- 
     train_edx %>% 
     left_join(b_i, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
-    mutate(pred = mu + b_i + b_u) %>%
+    left_join(b_my, by = 'movie_year') %>%
+    left_join(b_ry, by = 'rating_year') %>% 
+    mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
     .$pred
   
   return(RMSE(predicted_ratings, train_edx$rating))
 })
 
+lambda <- lambdas[which.min(rmses)]
+
+```
+
+In this case, the best tune lambda is equal to 0.5. The following graph shows the results of the process to find that best tune:
+
+```{r lambda_1_graph, echo=FALSE, out.width='60%'}
+
 qplot(lambdas, rmses) 
 
 ```
 
+Once the optimal value of lambda is determined, we train the model and make predictions on the test set.
+
+```{r mu_bi_bu_model, echo=TRUE, message=FALSE, warning=FALSE}
+
+mu <- mean(train_edx$rating)
+
+b_i <- train_edx %>%
+  group_by(movieId) %>%
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- train_edx %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+b_my <- train_edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  group_by(movie_year) %>% 
+  summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
+
+b_ry <- train_edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  left_join(b_my, by = 'movie_year') %>% 
+  group_by(rating_year) %>% 
+  summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+lambda))
+
+reg_movie_user_myear_ryear_effect_pred <- 
+  test_edx %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
+  .$pred
+
+reg_movie_user_myear_ryear_effect_rmse <- RMSE(reg_movie_user_myear_ryear_effect_pred, 
+                                               test_edx$rating)
+reg_movie_user_myear_ryear_effect_rmse
+  
+```
+
+This model, applied to the test set, yields an RMSE equal to 0.864636. In practice, the elements were added one by one, checking the RMSE on the test set after each iteration. In the results section we will present a table with a summary of the RMSEs obtained during the construction of the model.
+
+As can be seen, the inclusion of the release year and rating year effects is carried out in the same way in which the movie and user effects are added: first the data is grouped by the element to be added, and then its effect is calculated as the regularized average of the ratings, minus the average rating, minus the effects previously calculated.
+
+It should be noted that **this model was not selected as the definitive model immediately after its construction**. Previously, several tests were carried out trying to incorporate the effect of movie genres in the prediction of ratings. We detail these attempts below.
+
+## 3.3 Attempts with genres
+### 3.3.1 Firts Approach
+
+$$Y_{u,i} = \frac{1}{n}\sum\left(mu + b_i + b_u + b_{my} + b_{ry} + b_g \right) + \epsilon_{u,i}$$
+The first attempt to incorporate genders into the model was based on the separation into rows of the multi-categorical variable called *genres* (see the beginning of the section 2.2.4.1 to review the details of the code). As a reminder, we include here the example tables that we have already seen in the introduction:
+
+**Original genres variable**
+
+| userId| movieId| rating|title                   |**genres**                   | rating_year| movie_year|
+|------:|-------:|------:|:-----------------------|:----------------------------|-----------:|----------:|
+|      1|     122|      5|Boomerang (1992)        |Comedy/Romance               |        1996|       1992|
+|      1|     185|      5|Net, The (1995)         |Action/Crime/Thriller        |        1996|       1995|
+|      1|     292|      5|Outbreak (1995)         |Action/Drama/Sci-Fi/Thriller |        1996|       1995|
+|      1|     355|      5|Flintstones, The (1994) |Children/Comedy/Fantasy      |        1996|       1994|
+
+**Chaged genres variable**
+
+| userId| movieId| rating|title                   |**genres**                   | rating_year| movie_year|
+|------:|-------:|------:|:-----------------------------------------------------|-----------:|----------:|
+|      1|     122|    5.0|Boomerang (1992)        |Comedy                       |        1996|       1992|
+|      1|     122|    5.0|Boomerang (1992)        |Romance                      |        1996|       1992|
+|      1|     185|    5.0|Net, The (1995)         |Action                       |        1996|       1995|
+|      1|     185|    5.0|Net, The (1995)         |Crime                        |        1996|       1995|
+|      1|     185|    5.0|Net, The (1995)         |Thriller                     |        1996|       1995|
+|      1|     292|    5.0|Outbreak (1995)         |Action                       |        1996|       1995|
+|      1|     292|    5.0|Outbreak (1995)         |Drama                        |        1996|       1995|
+|      1|     292|    5.0|Outbreak (1995)         |Sci-Fi                       |        1996|       1995|
+|      1|     292|    5.0|Outbreak (1995)         |Thriller                     |        1996|       1995|
+|      1|     355|    5.0|Flintstones, The (1994) |Children                     |        1996|       1994|
+|      1|     355|    5.0|Flintstones, The (1994) |Comedy                       |        1996|       1994|
+|      1|     355|    5.0|Flintstones, The (1994) |Fantasy                      |        1996|       1994|
+
+In this way, it is possible to add the effect of the genres in a similar way to what has been done previously:
+
+```{r adding_bg, echo=TRUE, message=FALSE, warning=FALSE}
+
+mu <- mean(train_edx_g$rating) 
+# mu <- mean(train_edx$rating)
+
+b_i <- train_edx_g %>%
+  group_by(movieId) %>%
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- train_edx_g %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+b_my <- train_edx_g %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  group_by(movie_year) %>% 
+  summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
+
+b_ry <- train_edx_g %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  left_join(b_my, by = 'movie_year') %>% 
+  group_by(rating_year) %>% 
+  summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+lambda))
+
+b_g <- train_edx_g %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  left_join(b_my, by = 'movie_year') %>% 
+  left_join(b_ry, by = 'rating_year') %>% 
+  group_by(genres) %>% 
+  summarise(b_g = sum(rating - b_i - b_u - b_my - b_ry - mu)/(n()+lambda))
+
+reg_movie_user_myear_ryear_genre_effect_pred <- 
+  test_edx_g %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  left_join(b_g, by = 'genres') %>% 
+  group_by(userId, movieId) %>% # <- Change
+  mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) %>% # <- Change (mean)
+  .$pred
+
+reg_movie_user_myear_ryear_effect_genre_rmse <- 
+  RMSE(reg_movie_user_myear_ryear_genre_effect_pred, 
+       test_edx_g$rating)
+
+reg_movie_user_myear_ryear_effect_genre_rmse
+
+```
+
+This model gives an RMSE of 0.8630654 on the test set. This RMSE is the lowest of all those obtained, but the model involves adding observations.
+
+Also, to make the final predictions, it is necessary to calculate the mean of the predictions related to each of the combinations of movieId and UserId. This is necessary because by separating the genres by rows, we get several different predictions for the same user and movie combination:
+
+```{r revision_preds_g, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Why we use the mean of preds for movieId - UserId combination?
+# Because when we separate genders by row, we can get several preds for
+# the same movieId - userId combination:
+
+revision_preds_g <- 
+  test_edx_g %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  left_join(b_g, by = 'genres') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry + b_g) 
+
+# For example, userId 325 have rated a lot of movies. If wee see the second one
+# (Star Trek: Generations), we note that for every genre we get an slightly
+# different rate. But we need give only one rate for that user, and that movie.
+
+revision_preds_g %>% filter(userId == 325) %>% 
+  select(userId, movieId, title, genres, rating, pred) %>%
+  head(10) %>% 
+  knitr::kable()
+
+# So, before to make preds, we group by userId and movieId, and take the mean
+# of the preds:
+
+revision_preds_g_mean <- 
+  test_edx_g %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  left_join(b_g, by = 'genres') %>% 
+  group_by(userId, movieId) %>% # <- Change
+  mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) # <- Change (mean)
+
+revision_preds_g_mean %>% filter(userId == 325) %>% 
+  select(userId, movieId, title, genres, rating, pred) %>%
+  head(10) %>% 
+  knitr::kable()
+
+```
+
+The final result shows several lines with the same rating for each user-movie combination.
+
+Adding observations means altering the original sample, so although it generates optimal results in this specific case, we have preferred not to build our model based on this approach.
+
+### 3.3.2 Second Approach
+
+$$Y_{u,i} = mu + b_i + b_u + \sum^K_{k=1} x^k_{u,i}\beta_k + \epsilon_{u,i}$$
+with $x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$.
 
 
 
@@ -1131,5 +1396,3 @@ https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
 https://programmer.group/data-modeling-factor-analysis.html
 https://stackoverflow.com/questions/40509217/how-to-have-r-corrplot-title-position-correct
 https://cran.r-project.org/web/packages/corrplot/corrplot.pdf
-
-

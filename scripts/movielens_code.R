@@ -393,7 +393,9 @@ edx %>%
   head(10) %>% 
   knitr::kable()
 
-# __Regularized ####
+# __Regularized (lambda 0.5) ####
+lambda <- 0.5
+
 edx %>% 
   group_by(movieId) %>% 
   mutate(avg_rating = (sum(rating))/(n()+lambda), movie_ratings = n()) %>% 
@@ -795,7 +797,8 @@ genres_table %>%
   #size=2, 
   #expand=0.07) +
   geom_text(aes(ratings, avg_rating, label = genres), nudge_y = -0.02) +
-  labs(title = "Number of ratings versus average rating by gender") +
+  labs(title = "Number of ratings versus average rating by gender")
+  
   genres_table %>% 
   ggplot(aes(ratings, avg_rating, color = genres)) +
   geom_point(aes(color = genres), show.legend = FALSE) +
@@ -1202,7 +1205,7 @@ edx_ui <- edx_ui[,colCounts(edx_ui)>= 10]
 # known <- eval_scheme %>% getData("known")
 # unknown <- eval_scheme %>% getData("unknown")
 
-# Trainning Models ######
+# Training Models ######
 
 # ubcf_model <- Recommender(train, "UBCF")
 # ibcf_model <- Recommender(train, "IBCF")
@@ -1333,12 +1336,12 @@ rmses <- sapply(lambdas, function(l){
   
   b_i <- train_edx %>%
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarise(b_i = sum(rating - mu)/(n()+l))
   
   b_u <- train_edx %>% 
     left_join(b_i, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarise(b_u = sum(rating - b_i - mu)/(n()+l))
   
   predicted_ratings <- 
     train_edx %>% 
@@ -1366,12 +1369,12 @@ mu <- mean(train_edx$rating)
 
 b_i <- train_edx %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+lambda))
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
 
 b_u <- train_edx %>% 
   left_join(b_i, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
 
 reg_movie_user_effect_pred <- 
   test_edx %>% 
@@ -1447,12 +1450,12 @@ rmses <- sapply(lambdas, function(l){
   
   b_i <- train_edx %>%
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarise(b_i = sum(rating - mu)/(n()+l))
   
   b_u <- train_edx %>% 
     left_join(b_i, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarise(b_u = sum(rating - b_i - mu)/(n()+l))
   
   b_my <- train_edx %>% 
     left_join(b_i, by = 'movieId') %>% 
@@ -1489,12 +1492,12 @@ mu <- mean(train_edx$rating)
 
 b_i <- train_edx %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+lambda))
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
 
 b_u <- train_edx %>% 
   left_join(b_i, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
 
 b_my <- train_edx %>% 
   left_join(b_i, by = 'movieId') %>% 
@@ -1577,12 +1580,12 @@ rmses <- sapply(lambdas, function(l){
   
   b_i <- train_edx %>%
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarise(b_i = sum(rating - mu)/(n()+l))
   
   b_u <- train_edx %>% 
     left_join(b_i, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarise(b_u = sum(rating - b_i - mu)/(n()+l))
   
   b_my <- train_edx %>% 
     left_join(b_i, by = 'movieId') %>% 
@@ -1625,12 +1628,12 @@ mu <- mean(train_edx$rating)
 
 b_i <- train_edx %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+lambda))
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
 
 b_u <- train_edx %>% 
   left_join(b_i, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
 
 b_my <- train_edx %>% 
   left_join(b_i, by = 'movieId') %>% 
@@ -1687,12 +1690,12 @@ mu <- mean(edx$rating)
 
 b_i <- edx %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+lambda))
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
 
 b_u <- edx %>% 
   left_join(b_i, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
 
 b_my <- edx %>% 
   left_join(b_i, by = 'movieId') %>% 
@@ -1725,9 +1728,6 @@ edx_reg_movie_user_myear_ryear_effect_rmse <- RMSE(edx_reg_movie_user_myear_ryea
 edx_reg_movie_user_myear_ryear_effect_rmse
 # __0.8562849 #####
 
-
-
-
 # ___________________________________########
 ##### ADDING GENRE EFFECT  ######
 ###### APPROACH 1  ######
@@ -1753,12 +1753,12 @@ rmses_g <- sapply(lambdas, function(l){
   
   b_i <- train_edx_g %>%
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarise(b_i = sum(rating - mu)/(n()+l))
   
   b_u <- train_edx_g %>% 
     left_join(b_i, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarise(b_u = sum(rating - b_i - mu)/(n()+l))
   
   b_my <- train_edx_g %>% 
     left_join(b_i, by = 'movieId') %>% 
@@ -1819,12 +1819,12 @@ mu <- mean(train_edx_g$rating)
 
 b_i <- train_edx_g %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+lambda))
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
 
 b_u <- train_edx_g %>% 
   left_join(b_i, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
 
 b_my <- train_edx_g %>% 
   left_join(b_i, by = 'movieId') %>% 
@@ -1890,13 +1890,13 @@ revision_preds_g <-
   left_join(b_g, by = 'genres') %>% 
   mutate(pred = mu + b_i + b_u + b_my + b_ry + b_g) 
 
-
 # For example, userId 325 have rated a lot of movies. If wee see the second one
-# (Star Trek: Generation), we note that for every genre we get an slightly
+# (Star Trek: Generations), we note that for every genre we get an slightly
 # different rate. But we need give only one rate for that user, and that movie.
 
 revision_preds_g %>% filter(userId == 325) %>% 
   select(userId, movieId, title, genres, rating, pred) %>%
+  head(10) %>% 
   knitr::kable()
 
 # So, before to make preds, we group by userId and movieId, and take the mean
@@ -1914,6 +1914,7 @@ revision_preds_g_mean <-
 
 revision_preds_g_mean %>% filter(userId == 325) %>% 
   select(userId, movieId, title, genres, rating, pred) %>%
+  head(10) %>% 
   knitr::kable()
 
 # ___________________________________########
@@ -1982,12 +1983,12 @@ mu_genres <- mean(train_edx_genres$rating) ##__avg rating #####
 
 b_i_genres <- train_edx_genres %>%
   group_by(movieId) %>%
-  summarize(b_i_genres = sum(rating - mu_genres)/(n()+lambda)) # __b_i ####
+  summarise(b_i_genres = sum(rating - mu_genres)/(n()+lambda)) # __b_i ####
 
 b_u_genres <- train_edx_genres %>% # __b_u ######
   left_join(b_i_genres, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u_genres = sum(rating - b_i_genres - mu_genres)/(n()+lambda))
+  summarise(b_u_genres = sum(rating - b_i_genres - mu_genres)/(n()+lambda))
 
 # __Calculating Betas for every genre ####
 
@@ -2171,12 +2172,12 @@ mu <- mean(edx_g$rating) #       <- rmse = 0.8534774
 
 b_i <- edx_g %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+lambda))
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
 
 b_u <- edx_g %>% 
   left_join(b_i, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
 
 b_my <- edx_g %>% 
   left_join(b_i, by = 'movieId') %>% 
@@ -2233,7 +2234,7 @@ edx_g_reg_movie_user_myear_ryear_effect_genre_rmse
 
 
 # ___________________________________########
-##### Cambiar por modelo sensillo APPLYING THE FINAL MODEL OVER VALIDATION SET  ######
+##### Cambiar por modelo sencillo APPLYING THE FINAL MODEL OVER VALIDATION SET  ######
 # ___________________________________########
 
 #Now, we apply the final model trained with edx set, over the validation set.
