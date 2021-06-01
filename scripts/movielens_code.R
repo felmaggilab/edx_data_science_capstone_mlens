@@ -1486,7 +1486,7 @@ min(rmses)
 # 0.855974
 
 # Predictions with best tune lambda #######
-# Here we make predictions over the test set, using best tune
+# Here we make predictions over the test set, using best tune (lambda = 0.25)
 
 mu <- mean(train_edx$rating)
 
@@ -1622,7 +1622,7 @@ min(rmses)
 # 0.8558851
 
 # Predictions with best tune lambda #######
-# Here we make predictions over the test set, using best tune
+# Here we make predictions over the test set, using best tune (lambda = 0.5)
 
 mu <- mean(train_edx$rating)
 
@@ -1677,56 +1677,6 @@ data.frame("mu" = naive_rmse,
            "reg_bi_bu_bmy" = reg_movie_user_effect_myear_rmse, 
            "reg_bi_bu_bmy_bry" = reg_movie_user_myear_ryear_effect_rmse) %>% 
   knitr::kable()
-
-
-# ___________________________________########
-##### APPLYING THE MODEL OVER ENTIRE EDX SET ######
-# ___________________________________########
-
-# Here we use the lambdas that we got in the previous step, over the
-# entire edx set.
-
-mu <- mean(edx$rating)
-
-b_i <- edx %>%
-  group_by(movieId) %>%
-  summarise(b_i = sum(rating - mu)/(n()+lambda))
-
-b_u <- edx %>% 
-  left_join(b_i, by="movieId") %>%
-  group_by(userId) %>%
-  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
-
-b_my <- edx %>% 
-  left_join(b_i, by = 'movieId') %>% 
-  left_join(b_u, by = 'userId') %>% 
-  group_by(movie_year) %>% 
-  summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
-
-b_ry <- edx %>% 
-  left_join(b_i, by = 'movieId') %>% 
-  left_join(b_u, by = 'userId') %>% 
-  left_join(b_my, by = 'movie_year') %>% 
-  group_by(rating_year) %>% 
-  summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+lambda))
-
-edx_reg_movie_user_myear_ryear_effect_pred <- 
-  edx %>% 
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  left_join(b_my, by = 'movie_year') %>%
-  left_join(b_ry, by = 'rating_year') %>% 
-  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
-  .$pred
-
-str(edx_reg_movie_user_myear_ryear_effect_pred)
-
-# Regularized Movie + User + Movie Year + Rating Year #####
-
-edx_reg_movie_user_myear_ryear_effect_rmse <- RMSE(edx_reg_movie_user_myear_ryear_effect_pred, 
-                                                   edx$rating)
-edx_reg_movie_user_myear_ryear_effect_rmse
-# __0.8562849 #####
 
 # ___________________________________########
 ##### ADDING GENRE EFFECT  ######
@@ -1863,14 +1813,14 @@ reg_movie_user_myear_ryear_genre_effect_pred <-
 
 # Regularized Movie + User + Movie Year + Rating Year + Genre #####
 
-reg_movie_user_myear_ryear_effect_genre_rmse <- 
+reg_movie_user_myear_ryear_effect_genre_1_rmse <- 
   RMSE(reg_movie_user_myear_ryear_genre_effect_pred, 
        test_edx_g$rating)
 
 length(reg_movie_user_myear_ryear_genre_effect_pred)
 length(test_edx_g$rating)
 
-reg_movie_user_myear_ryear_effect_genre_rmse
+reg_movie_user_myear_ryear_effect_genre_1_rmse
 #__0.864636 orig model no genre #####
 #__0.8631034 genre and mu orig #####
 #__0.8631031 genre and mu g #####
@@ -1933,6 +1883,7 @@ revision_preds_g_mean %>% filter(userId == 325) %>%
 # genre, the value of the column for that genre will be 1 for that movie
 
 ##### Adding dummy variables in train set #####
+# It takes some time!
 
 # replacing "|" by "," ("|" is not interpreted by dummy_columns funtion)
 train_edx_genres <- train_edx %>% 
@@ -1977,7 +1928,7 @@ str(test_edx_genres)
 # The idea is to calculate a weight (Beta) for each genre, and multiply that weight 
 # by 1 if the film belongs to that genre (by zero otherwise)
 
-#(Here we use lambda = 0.5 as best tune finded previously)
+lambda <- 0.5 #Here we use lambda = 0.5 as best tune finded previously
 
 mu_genres <- mean(train_edx_genres$rating) ##__avg rating #####
 
@@ -1999,115 +1950,134 @@ Beta_Action <-
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId")%>%
-  summarise(Beta_Action = mean(rating - sum(rating*genres_Action)/(sum(genres_Action)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Action = mean(rating - sum(rating*genres_Action)/
+                                 (sum(genres_Action)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Adventure <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Adventure = mean(rating - sum(rating*genres_Adventure)/(sum(genres_Adventure)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Adventure = mean(rating - sum(rating*genres_Adventure)/
+                                    (sum(genres_Adventure)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Animation <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Animation = mean(rating - sum(rating*genres_Animation)/(sum(genres_Animation)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Animation = mean(rating - sum(rating*genres_Animation)/
+                                    (sum(genres_Animation)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Children <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Children = mean(rating - sum(rating*genres_Children)/(sum(genres_Children)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Children = mean(rating - sum(rating*genres_Children)/
+                                   (sum(genres_Children)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Comedy <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Comedy = mean(rating - sum(rating*genres_Comedy)/(sum(genres_Comedy)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Comedy = mean(rating - sum(rating*genres_Comedy)/
+                                 (sum(genres_Comedy)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Fantasy  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Fantasy = mean(rating - sum(rating*genres_Fantasy)/(sum(genres_Fantasy)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Fantasy = mean(rating - sum(rating*genres_Fantasy)/
+                                  (sum(genres_Fantasy)+lambda) - b_i_genres - b_u_genres))
 
 Beta_IMAX  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_IMAX = mean(rating - sum(rating*genres_IMAX)/(sum(genres_IMAX)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_IMAX = mean(rating - sum(rating*genres_IMAX)/
+                               (sum(genres_IMAX)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Sci_Fi  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Sci_Fi = mean(rating - sum(rating*genres_Sci_Fi)/(sum(genres_Sci_Fi)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Sci_Fi = mean(rating - sum(rating*genres_Sci_Fi)/
+                                 (sum(genres_Sci_Fi)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Drama  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Drama = mean(rating - sum(rating*genres_Drama)/(sum(genres_Drama)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Drama = mean(rating - sum(rating*genres_Drama)/
+                                (sum(genres_Drama)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Horror <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Horror  = mean(rating - sum(rating*genres_Horror)/(sum(genres_Horror)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Horror  = mean(rating - sum(rating*genres_Horror)/
+                                  (sum(genres_Horror)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Mystery <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Mystery  = mean(rating - sum(rating*genres_Mystery)/(sum(genres_Mystery)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Mystery  = mean(rating - sum(rating*genres_Mystery)/
+                                   (sum(genres_Mystery)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Romance  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Romance = mean(rating - sum(rating*genres_Romance)/(sum(genres_Romance)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Romance = mean(rating - sum(rating*genres_Romance)/
+                                  (sum(genres_Romance)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Thriller <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Thriller = mean(rating - sum(rating*genres_Thriller)/(sum(genres_Thriller)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Thriller = mean(rating - sum(rating*genres_Thriller)/
+                                   (sum(genres_Thriller)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Crime  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Crime = mean(rating - sum(rating*genres_Crime)/(sum(genres_Crime)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Crime = mean(rating - sum(rating*genres_Crime)/
+                                (sum(genres_Crime)+lambda) - b_i_genres - b_u_genres))
 
 Beta_War  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_War = mean(rating - sum(rating*genres_War)/(sum(genres_War)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_War = mean(rating - sum(rating*genres_War)/
+                              (sum(genres_War)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Western  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Western = mean(rating -sum(rating*genres_Western)/(sum(genres_Western)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Western = mean(rating -sum(rating*genres_Western)/
+                                  (sum(genres_Western)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Musical  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Musical = mean(rating - sum(rating*genres_Musical)/(sum(genres_Musical)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Musical = mean(rating - sum(rating*genres_Musical)/
+                                  (sum(genres_Musical)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Documentary  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId")  %>%
-  summarise(Beta_Documentary = mean(rating - sum(rating*genres_Documentary)/(sum(genres_Documentary)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Documentary = mean(rating - sum(rating*genres_Documentary)/
+                                      (sum(genres_Documentary)+lambda) - b_i_genres - b_u_genres))
 
 Beta_Film_Noir  <- 
   train_edx_genres %>% 
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>%
-  summarise(Beta_Film_Noir = mean(rating - sum(rating*genres_Film_Noir)/(sum(genres_Film_Noir)+lambda) - b_i_genres - b_u_genres))
+  summarise(Beta_Film_Noir = mean(rating - sum(rating*genres_Film_Noir)/
+                                    (sum(genres_Film_Noir)+lambda) - b_i_genres - b_u_genres))
 
 # Calculating Sum(XuiK * BetaK), XuiK = 1 if genre = K
 b_g_genres <- train_edx_genres %>% 
@@ -2139,12 +2109,12 @@ train_predicted_ratings_genres <-
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>% 
   left_join(b_g_genres, by = "movieId") %>%
-  mutate(mu_genres = mu_genres, pred = mu_genres + b_i_genres + b_u_genres - b_g_genres) %>%
+  mutate(mu_genres = mu_genres, pred = mu_genres + b_i_genres + b_u_genres + b_g_genres) %>%
   .$pred
 
-train_genres_rmse <- RMSE(predicted_ratings_genres, train_edx_genres$rating)
+train_genres_rmse <- RMSE(train_predicted_ratings_genres, train_edx_genres$rating)
 train_genres_rmse
-# 0.8789393
+# 0.8838732
 
 # Predictions over the test set ####
 
@@ -2153,88 +2123,69 @@ test_predicted_ratings_genres <-
   left_join(b_i_genres, by = "movieId") %>%
   left_join(b_u_genres, by = "userId") %>% 
   left_join(b_g_genres, by = "movieId") %>%
-  mutate(mu_genres = mu_genres, pred = mu_genres + b_i_genres + b_u_genres - b_g_genres) %>%
+  mutate(mu_genres = mu_genres, pred = mu_genres + b_i_genres + b_u_genres + b_g_genres) %>%
   .$pred
 
-test_genres_rmse <- RMSE(test_predicted_ratings_genres, test_edx_genres$rating)
-test_genres_rmse
-# 0.8874411 #####
+reg_movie_user_genre_2_rmse <- RMSE(test_predicted_ratings_genres, test_edx_genres$rating)
+reg_movie_user_genre_2_rmse
+# __0.8922815 #####
 
 # In this case, when we add the genre to the model, we get worse preliminary 
 # results than those obtained only with the movie and user effects.
+# We decided to stick with the model that includes movie effects, user effects, 
+# release year effects, and rating year effects.
 
 # ___________________________________########
-##### APPLYING FINAL MODEL OVER ENTIRE EDX_G SET ######
+##### TRAINING THE FINAL MODEL WITH ENTIRE EDX SET ######
 # ___________________________________########
 
-mu <- mean(edx_g$rating) #       <- rmse = 0.8534774
-# mu <- mean(train_edx$rating) # <- rmse = 0.8534776 
+# Here we use the lambdas that we got in the previous step, over the
+# entire edx set.
 
-b_i <- edx_g %>%
+mu <- mean(edx$rating)
+
+b_i <- edx %>%
   group_by(movieId) %>%
   summarise(b_i = sum(rating - mu)/(n()+lambda))
 
-b_u <- edx_g %>% 
+b_u <- edx %>% 
   left_join(b_i, by="movieId") %>%
   group_by(userId) %>%
   summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
 
-b_my <- edx_g %>% 
+b_my <- edx %>% 
   left_join(b_i, by = 'movieId') %>% 
   left_join(b_u, by = 'userId') %>% 
   group_by(movie_year) %>% 
   summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
 
-b_ry <- edx_g %>% 
+b_ry <- edx %>% 
   left_join(b_i, by = 'movieId') %>% 
   left_join(b_u, by = 'userId') %>% 
   left_join(b_my, by = 'movie_year') %>% 
   group_by(rating_year) %>% 
   summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+lambda))
 
-b_g <- edx_g %>% 
-  left_join(b_i, by = 'movieId') %>% 
-  left_join(b_u, by = 'userId') %>% 
-  left_join(b_my, by = 'movie_year') %>% 
-  left_join(b_ry, by = 'rating_year') %>% 
-  group_by(genres) %>% 
-  summarise(b_g = sum(rating - b_i - b_u - b_my - b_ry - mu)/(n()+lambda))
-
-edx_g_reg_movie_user_myear_ryear_genre_effect_pred <- 
-  edx_g %>% 
+edx_reg_movie_user_myear_ryear_effect_pred <- 
+  edx %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
   left_join(b_my, by = 'movie_year') %>%
   left_join(b_ry, by = 'rating_year') %>% 
-  left_join(b_g, by = 'genres') %>% 
-  group_by(userId, movieId) %>% 
-  mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) %>%
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
   .$pred
 
-# Here he change the previous code: final preds are the mean of all preds
-# related to every movieId and userId combination
+str(edx_reg_movie_user_myear_ryear_effect_pred)
 
-str(edx_g_reg_movie_user_myear_ryear_genre_effect_pred)
+# Regularized Movie + User + Movie Year + Rating Year #####
 
-# Regularized Movie + User + Movie Year + Rating Year + Gender #####
-
-edx_g_reg_movie_user_myear_ryear_effect_genre_rmse <- 
-  RMSE(edx_g_reg_movie_user_myear_ryear_genre_effect_pred, 
-       edx_g$rating)
-
-edx_g_reg_movie_user_myear_ryear_effect_genre_rmse
-#__0.8534774########
-
-
-# Adding the gender effect over the entire EDX data set improves the rmse 
-# that we got with the previous model. 
-
-# We will apply now the final model, train with the entire EDX data set,
-# over the validation set
-
+edx_reg_movie_user_myear_ryear_effect_rmse <- RMSE(edx_reg_movie_user_myear_ryear_effect_pred, 
+                                                   edx$rating)
+edx_reg_movie_user_myear_ryear_effect_rmse
+# __0.8562849 #####
 
 # ___________________________________########
-##### Cambiar por modelo sencillo APPLYING THE FINAL MODEL OVER VALIDATION SET  ######
+##### APPLYING THE FINAL MODEL OVER VALIDATION SET  ######
 # ___________________________________########
 
 #Now, we apply the final model trained with edx set, over the validation set.
@@ -2261,106 +2212,9 @@ validation <- validation %>%
 # Review of final results
 validation[ind]
 
-# Separation of genders by row, over the validation set ######
-
-validation_g <- validation %>% separate_rows(genres, sep = "\\|") # It takes some time!
-
-head(validation_g) %>% knitr::kable()
-
 # Preds over validation set #####
 
 validation_preds <- 
-  validation_g %>% 
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  left_join(b_my, by = 'movie_year') %>%
-  left_join(b_ry, by = 'rating_year') %>% 
-  left_join(b_g, by = 'genres') %>% 
-  group_by(userId, movieId) %>% 
-  mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g)) %>%
-  .$pred
-
-# RMSE over validation set #####
-validation_preds_rmse <- RMSE(validation_preds, validation_g$rating)
-validation_preds_rmse
-# __0.8627351 ###### : mu <- mean(edx_g$rating)
-# __0.8627354 ###### : mu <- mean(train_edx$rating)
-
-# Revision
-
-validation_preds_rev <- 
-  validation_g %>% 
-  left_join(b_i, by = "movieId") %>%
-  left_join(b_u, by = "userId") %>%
-  left_join(b_my, by = 'movie_year') %>%
-  left_join(b_ry, by = 'rating_year') %>% 
-  left_join(b_g, by = 'genres') %>% 
-  group_by(userId, movieId) %>% 
-  mutate(pred = mean(mu + b_i + b_u + b_my + b_ry + b_g))
-
-
-validation_preds_rev %>% filter(userId == 621) %>% 
-  select(userId, movieId, title, genres, rating, pred) %>%
-  knitr::kable()
-
-validation_preds_rev %>% filter(movieId == 480) %>% 
-  select(userId, movieId, title, genres, rating, pred) %>%
-  knitr::kable()
-
-validation_preds_rev %>% filter(userId == 621) %>% 
-  select(userId, movieId, title, genres, rating, pred) %>%
-  ggplot(aes(rating, pred)) +
-  geom_point()
-
-validation_preds_rev %>% 
-  mutate(rating = as.factor(rating)) %>% 
-  mutate(rating = factor(rating, 
-                         levels = levels(rating)[c(9,8,10,3,7,2,4,6,5,1)])) %>% 
-  select(userId, movieId, title, genres, rating, pred) %>%
-  ggplot(aes(rating, pred)) +
-  geom_boxplot() +
-  geom_point() +
-  geom_jitter(width = 0.1, alpha = 0.5)
-
-validation_preds_rev %>% 
-  mutate(rating = as.factor(rating)) %>% 
-  mutate(rating = factor(rating, 
-                         levels = levels(rating)[c(9,8,10,3,7,2,4,6,5,1)])) %>% 
-  ggplot(aes(pred, fill = pred)) +
-  geom_density()
-
-
-
-class(validation_preds_rev$rating)
-
-
-# Final Table ######
-
-final_table <- data.frame(model = c("mu", 
-                                    "bi", 
-                                    "bi_bu", 
-                                    "reg_bi_bu", 
-                                    "reg_bi_bu_bmy", 
-                                    "reg_bi_bu_bmy_bry", 
-                                    "reg_bi_bu_bmy_bry_b_g",
-                                    "validation_final_model"), 
-                          rmse = c(naive_rmse, 
-                                   movie_effect_rmse,  
-                                   movie_user_effect_rmse, 
-                                   reg_movie_user_effect_rmse,  
-                                   reg_movie_user_effect_myear_rmse,
-                                   reg_movie_user_myear_ryear_effect_rmse,
-                                   reg_movie_user_myear_ryear_effect_gender_rmse,
-                                   validation_preds_rmse)) %>% 
-  knitr::kable()
-
-final_table
-
-
-#_____ Validation  model movie, user, movie year, rating year________#####
-
-
-validation_pred <- 
   validation %>% 
   left_join(b_i, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
@@ -2369,58 +2223,285 @@ validation_pred <-
   mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
   .$pred
 
-# Regularized Movie + User + Movie Year + Rating Year #####
-
-edx_reg_movie_user_myear_ryear_effect_rmse_val <- RMSE(validation_pred, 
-                                                       validation$rating)
-edx_reg_movie_user_myear_ryear_effect_rmse_val
-# __0.8648047 #####
+validation_preds_rmse <- RMSE(validation_preds, validation$rating)
+validation_preds_rmse
+# __0.8648047 #######
 
 # ___________________________________########
-  ##### EXPLAINING THE MODEL ######
+##### RESULTS ######
 # ___________________________________########
 
-b_i
-mean(b_i$b_i)
-sd(b_i$b_i)
+# Table of results on the test set ######
+models_rmse_table <- data.frame(model = c("mu", 
+                                    "bi", 
+                                    "bi_bu", 
+                                    "reg_bi_bu", 
+                                    "reg_bi_bu_bmy", 
+                                    "reg_bi_bu_bmy_bry", 
+                                    "reg_bi_bu_bmy_bry_b_g_1",
+                                    "reg_bi_bu_b_g_2"), 
+                          rmse = c(naive_rmse, 
+                                   movie_effect_rmse,  
+                                   movie_user_effect_rmse, 
+                                   reg_movie_user_effect_rmse,  
+                                   reg_movie_user_effect_myear_rmse,
+                                   reg_movie_user_myear_ryear_effect_rmse,
+                                   reg_movie_user_myear_ryear_effect_genre_1_rmse,
+                                   reg_movie_user_genre_2_rmse)) %>% 
+  knitr::kable()
 
-b_u
-mean(b_u$b_u)
-sd(b_u$b_u)
+models_rmse_table
 
-b_my
-mean(b_my$b_my)
-sd(b_my$b_my)
+# Results final model on the validation set ######
+validation_preds_rmse <- RMSE(validation_preds, validation$rating)
+validation_preds_rmse
+# __0.8648047 #######
 
-b_ry
-mean(b_ry$b_ry)
-sd(b_ry$b_ry)
+# ___________________________________########
+  ##### MODEL PERFORMANCE ######
+# ___________________________________########
 
-b_g
-mean(b_g$b_g)
-sd(b_g$b_g)
+mu <- mean(edx$rating)
+sd <- sd(edx$rating)
 
-cor(validation_preds_rev$pred, validation_preds_rev$rating)
-# 0.5729347
+validation_preds_rev <- 
+  validation %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>% 
+  filter(!is.na(pred)) # NA Filtering
 
-film_noir <- validation_preds_rev %>% 
-  filter(genres == "Film-Noir")
+# Stratification according to rating #####
 
-cor(film_noir$pred, film_noir$rating)
+#__Rating = 0.5 ####
+validation_preds_rev_0_5 <- 
+  validation_preds_rev %>% 
+  filter(rating == 0.5)
 
-drama <- validation_preds_rev %>% 
-  filter(genres == "Drama")
+validation_preds_rev_0_5 %>% 
+  ggplot(aes(pred, y = ..count.., fill = as.factor(rating))) +
+  geom_density()
+  
+  geom_histogram(bins = 100, color = "#999999", fill = "#0072B2")
 
-cor(drama$pred, drama$rating)
 
-imax <- validation_preds_rev %>% 
-  filter(genres == "IMAX")
+ggplot(aes(dollars_per_day, y = ..count.., fill = group)) +
 
-cor(imax$pred, imax$rating)
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_0_5 %>% 
+  sample_n(size = 11) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
 
-validation_preds_rev %>%
-  ggplot(aes(rating, pred, color = genres)) +
-  geom_boxplot()
+#__Rating = 1 ####
+validation_preds_rev_1_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 1)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_1_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 1.5 ####
+validation_preds_rev_1_5 <- 
+  validation_preds_rev %>% 
+  filter(rating == 1.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_1_5 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 2 ####
+validation_preds_rev_2_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 2)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_2_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 2.5 ####
+validation_preds_rev_2_5 <-
+  validation_preds_rev %>% 
+  filter(rating == 2.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_2_5 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 3 ####
+validation_preds_rev_3_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 3)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_3_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 3.5 ####
+validation_preds_rev_3_5 <- 
+  validation_preds_rev %>% 
+  filter(rating == 3.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_3_5 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 4 ####
+validation_preds_rev_4_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 4)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_4_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 4.5 ####
+validation_preds_rev_4_5 <- 
+  validation_preds_rev %>% 
+  filter(rating == 4.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_4_5 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 5 ####
+validation_preds_rev_5_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_5_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+# RMSEs stratificacion
+
+rmse_05 <- RMSE(validation_preds_rev_0_5$rating, validation_preds_rev_0_5$pred)
+rmse_05
+
+rmse_1 <- RMSE(validation_preds_rev_1_0$rating, validation_preds_rev_1_0$pred)
+rmse_1
+
+rmse_1_5 <- RMSE(validation_preds_rev_1_5$rating, validation_preds_rev_1_5$pred)
+rmse_1_5
+
+rmse_2_0 <- RMSE(validation_preds_rev_2_0$rating, validation_preds_rev_2_0$pred)
+rmse_2_0
+
+rmse_2_5 <- RMSE(validation_preds_rev_2_5$rating, validation_preds_rev_2_5$pred)
+rmse_2_5
+
+rmse_3_0 <- RMSE(validation_preds_rev_3_0$rating, validation_preds_rev_3_0$pred)
+rmse_3_0
+
+rmse_3_5 <- RMSE(validation_preds_rev_3_5$rating, validation_preds_rev_3_5$pred)
+rmse_3_5
+
+rmse_4_0 <- RMSE(validation_preds_rev_4_0$rating, validation_preds_rev_4_0$pred)
+rmse_4_0
+
+rmse_4_5 <- RMSE(validation_preds_rev_4_5$rating, validation_preds_rev_4_5$pred)
+rmse_4_5
+
+rmse_5_0 <- RMSE(validation_preds_rev_5_0$rating, validation_preds_rev_5_0$pred)
+rmse_5_0
+
+rating_strata <- c(0.5, 1, 1.5, 2.0, 2.5, 3.0, 3.5, 4, 4.5, 5)
+rmses <- c(rmse_05, rmse_1, rmse_1_5, rmse_2_0, rmse_2_5, rmse_3_0, rmse_3_5,
+           rmse_4_0, rmse_4_5, rmse_5_0)
+
+ratings_rmses <- data.frame(rating_strata = rating_strata, rmses = rmses)
+ratings_rmses %>% 
+  knitr::kable()
+
+# Preds vs Rating Scatter Plot #####
+
+plot(rating_strata, rmses)
+  
+# Preds vs Rating Box_Plot #####
+
+rating_preds <- validation_preds_rev %>% 
+  select(rating, pred)
+
+rating_preds %>% 
+  ggplot(aes(as.factor(rating), pred)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.01) +
+  labs(title = "Predictons vs rating Box Plot") +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+  
+
+# Stratified predictions density plots #######
+
+validation_preds_rev %>% 
+  filter(rating == 1 |
+           rating == 2 |
+           rating == 3 |
+           rating == 4 |
+           rating == 5)  %>% 
+  ggplot(aes(pred, y = ..count.., fill = as.factor(rating))) +
+  geom_density(alpha = 0.3, bw = 0.75) +
+  labs(title = "Stratified predictions density plots") +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+
+  
+
+
+Lars Hulstaert, 2019: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3
+http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
+https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+https://programmer.group/data-modeling-factor-analysis.html
+https://stackoverflow.com/questions/40509217/how-to-have-r-corrplot-title-position-correct
+https://cran.r-project.org/web/packages/corrplot/corrplot.pdf
+
+
+
+
+
+
+
 
 
 

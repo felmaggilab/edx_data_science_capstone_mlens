@@ -1,5 +1,5 @@
 ---
-title: "Test"
+title: "Linear Model for Movie Rating Predictions"
 author: "Felipe Maggi"
 date: "14/4/2021"
 output:
@@ -162,16 +162,19 @@ test_edx <- test_edx %>%
 
 This report explains the process of building a linear model for movie ratings prediction, through which an RMSE of 0.8648047 is achieved. The final model takes into account movie effects ($b_i$), user effects ($b_u$), movie year effects ($b_{my}$), and rating year effects ($b_{ry}$), and its expression is:
 $$Y_{u,i} = mu + b_i + b_u + b_{my} + b_{ry} + \epsilon_{u,i}$$
-
-During model development, we experimented with the genre effect in two different ways. The first approach was to separate the movie genres by row, and add them to the model in the same way that the movie, user, release year, and rating year effects were added: $Y_{u,i} = \frac{1}{n}\sum\left(mu + b_i + b_u + b_{my} + b_{ry} + b_g \right) + \epsilon_{u,i}$
+During model development, we experimented with the genre effect in two different ways. The first approach was to separate the movie genres by row, and add them to the model in the same way that the movie, user, release year, and rating year effects were added. Since that generates as many new predictions as there are genres in the movie, the final prediction is calculated as an average (the sum of all predictions related to a user-movie combination, divided by the number of genres in the movie): 
+$$Y_{u,i} = \frac{1}{n}\sum\left(mu + b_i + b_u + b_{my} + b_{ry} + bg_{u,i} \right) + \epsilon_{u,i}$$ 
+with $n$ = number of genres of movie $i$
 
 With this model we get an RMSE on the test data set of 0.8630654. This RMSE was by far the best of all those obtained on the test data set. However, it involves adding observations, and we prefer to present a final solution in which the number of observations is not altered.
 
-The second approach was to add the gender effect using dummy variables with values 0 or 1 for each gender. In this way, no observations (rows) are added, but columns, in order to multiply the weight ($\beta$) of each gender by the value of the dummy variable. This model presents the following expression: $Y_{u,i} = mu + b_i + b_u + \sum^K_{k=1} x^k_{u,i}\beta_k + \epsilon_{u,i}$, with $x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$. 
+The second approach was to add the gender effect using dummy variables with values 0 or 1 for each gender. In this way, no observations (rows) are added, but columns, in order to multiply the weight ($\beta$) of each gender by the value of the dummy variable. This model presents the following expression: 
+$$Y_{u,i} = mu + b_i + b_u + \sum^K_{k=1} x^k_{u,i}\beta_k + \epsilon_{u,i}$$ 
+with $x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$. 
 
-In this case, the RMSE obtained on the test set was 0.8874411. This result turned out to be worse than that obtained with a simple model that only took into account the film and user effects. Being a linear model, nothing, except changing the way in which the weights of each genre were calculated, was going to improve the result more than to eliminate the genre effect completely. After several tests, without finding an optimal way to calculate these weights, we decided to go for the simplest final model, which does not take into account the movie genres, but does not add observations in the original data sets.
+In this case, the RMSE obtained on the test set was 0.8922815. This result turned out to be worse than that obtained with a simple model that only took into account the film and user effects. Being a linear model, nothing, except changing the way in which the weights of each genre were calculated, was going to improve the result more than to eliminate the genre effect completely. After several tests, without finding an optimal way to calculate these weights, we decided to go for the simplest final model, which does not take into account the movie genres, but does not add observations in the original data sets.
 
-As additional information, we comment here that before adopting the linear approach, we performed tests with the _recommenderlab_ package. This approach was finally abandoned, among other reasons for its computational demands but, above all, for including techniques that we did not master at the time of development of our model.
+Before adopting the linear approach, we performed tests with the _recommenderlab_ package. This approach was finally abandoned, among other reasons for its computational demands but, above all, for including techniques that we did not master at the time of development of our model.
 
 ***
 
@@ -197,7 +200,7 @@ The *edx* data frame was divided in a training set, with the 90% of the data, an
 In turn, *movielens* data frame contains 10,100,000 observations, of which 10% were set aside to create the validation set. It is important to note that the *validation* set was not used for training, nor to calculate the *Root Mean Square Error* (RMSE) of the model during its construction. 
 
 ## 1.2 Goals and key steps
-Our primary goal was to develop a model capable of achieving an RMSE below 0.86490 but, at the same time, manageable in terms of computational capabilities. In a first approach, we try with "Collaborative Filtering" type models using the *recommenderlab* package. However, and after several tests, we realized that to keep the training and validation times within reasonable ranges, it was necessary to work with a much smaller sample of the "edx" data frame than the original. Faced with this situation, we prefer to test a simpler, more approximate linear model that will enable us to work with the complete data frame. The assumption here is that, although the models available in the recommenderlab package could be more powerful, it is preferable to train a simpler model with more data.
+Our primary goal was to develop a model capable of achieving an RMSE below 0.86490 but, at the same time, manageable in terms of computational capabilities. In a first approach, we try with "Collaborative Filtering" type models using the *recommenderlab* package. However, and after several tests, we realized that to keep the training and validation times within reasonable ranges, it was necessary to work with a much smaller sample of the *edx* data frame than the original. Faced with this situation, we prefer to test a simpler, more approximate linear model that will enable us to work with the complete data frame. The assumption here is that, although the models available in the recommenderlab package could be more powerful, it is preferable to train a simpler model with more data.
 
 In addition, the approach had other considerable disadvantages for us:
 
@@ -215,7 +218,7 @@ Once we decided on a simpler linear approach, we began to build the model step b
 3. User effects: $b_u$
 4. Movie year effects: $b_{my}$
 5. Rating year effects: $b_{ry}$
-6. Genres effects (approach 1): $b_g$
+6. Genres effects (approach 1): $bg_{u,i}$
 7. Genres effects (approach 2): $\sum^K_{k=1} x^k_{u,i}\beta_k$
 
 We left the effect of genres for last, because we weren't sure how they would affect the model. On the one hand, we were aware that the genre of the films provides a lot of information and explains an important part of the variability of the data. But, on the other hand, we did not know if its inclusion would add noise to the model. Each movie can belong to several genres (and the possible combinations in the *edx* data frame exceeded 700). 
@@ -532,7 +535,7 @@ edx %>%
 
 Films released between 1930 and 1970 tend to be better rated than those released in other periods, and films released after this period, specially from, 1985 tend to receive the lowest ratings. 
 
-In the edx data set, and as expected, the number of films by year of release is not balanced. It grows more or less constantly until the premiere year of 1979, to make a significant leap from 1980:
+In the *edx* data set, and as expected, the number of films by year of release is not balanced. It grows more or less constantly until the premiere year of 1979, to make a significant leap from 1980:
 
 ```{r movie_per_realease_year, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
 # Movies per realease year ######
@@ -618,7 +621,7 @@ On the list, all the movies are blockbusters. There are movies with above-averag
 
 The trend in average ratings per year of release, therefore, could be partly explained by these two factors: 
 
-1. The aforementioned durability effect (few films that have lasted to this day, and that are considered as "good" films, and that generally obtain good ratings every time they are valued).
+1. The aforementioned durability effect (few old movies that have lasted until today, and that are considered as "good" films, and that generally obtain good ratings every time they are valued).
 2. The blockbuster effect (modern films that, thanks to large promotional campaigns, attract a lot of people, but whose ratings are much less skewed).
 
 To visualize this, we show below a couple of examples: the distribution of ratings for "Philadelphia Story, The (1940)" and "Batman Forever (1995)":
@@ -764,10 +767,17 @@ In 2000, 9 of the 15 films with the highest number of ratings belonged to the sc
 
 Our hypothesis here is that this effect is much more related to latent factors such as relationships between films (actors, directors, genres, etc ...), and external factors such as television shows or promotional actions for certain films. *American Beauty*, for example, had dominated the previous year's Oscars.
 
-Given these data, the inclusion in the model of the effect of the movie's rating year responds more to the fact that it effectively contributes to reducing the Root Mean Square Error, and not so much to the possibility of explaining the reasons why it does so. Although the final model is very simple and has few similarities with more complex algorithms considered as black boxes (neural networks or gradient boosting, for example), in this particular aspect they share the need to choose between explicability and accuracy (Hulstaert, 2019).
+Given these data, the inclusion in the model of the effect of the movie's rating year responds to the fact that it effectively contributes to reducing the Root Mean Square Error, and not to our ability to understand this factor.
+
+Mathematically the contribution is easy to explain: we are taking into account the average ratings according to the rating year, to include that factor in the model, and raise or lower the prediction based on these means, but we are not able to fully understand why certain movies get ratings in a specific year, or what makes movies get different ratings in different years.
+
+Although the final model is very simple and has few similarities with more complex algorithms considered as black boxes (neural networks or gradient boosting, for example), in this particular aspect they share the need to choose between explicability and accuracy (Hulstaert, 2019).
 
 ### 2.2.4 The genre effect
-#### 2.2.4.1 Average ratings and number of ratings by genres
+#### 2.2.4.1 Average ratings and number of ratings by genres  
+Although finally the genre of the films has not been taken into account in the elaboration of the final model, it is evident that the genre is an important factor in the rating of a film. The decision to leave it out of the model responds to the fact that we were not able to treat it adequately, in a way that improved the results. However, we are aware that we must continue to experiment with this element if we want to develop a more accurate model.
+
+To explore the contribution of film genre, it is useful to separate the variable genre by row: 
 
 ```{r separate_genders_by_row, echo=TRUE, message=FALSE, warning=FALSE}
 
@@ -780,6 +790,10 @@ edx_g <- edx %>% separate_rows(genres, sep = "\\|") # It takes some time!
 train_edx_g <- train_edx %>% separate_rows(genres, sep = "\\|")
 test_edx_g <- test_edx %>% separate_rows(genres, sep = "\\|")
 ```
+
+This generate a data frame in tidy format that allows you to easily view and explore the data related to this element. However, and as we will see later, using this procedure to include the effect of genre in the model generates over sampling, since we artificially increase the available observations.
+
+If we isolate the genres, separating the multi-categorical variable by rows, it is easy to calculate the average rating of the films that include a certain genre. The following table shows the average ratings by gender calculated in this way, and the number of observations (ratings) for each genre:
 
 ```{r genres_table_creation, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -802,12 +816,6 @@ genres_table <- avg_genres %>%
   left_join(ratings_genres, by = 'genres') 
 
 ```
-
-Although finally the genre of the films has not been taken into account in the elaboration of the final model, it is evident that the genre is an important factor in the rating of a film. The decision to leave it out of the model responds to the fact that we were not able to treat it adequately, in a way that improved the results. However, we are aware that we must continue to experiment with this element if we want to develop a more accurate model.
-
-To explore the contribution of film genre, it is useful to separate the variable genre by row. This generate a data frame in tidy format that allows you to easily view and explore the data related to this element. However, and as we will see later, using this procedure to include the effect of genre in the model generates over sampling, since we artificially increase the available observations.
-
-If we isolate the genres, separating the multi-categorical variable by rows, it is easy to calculate the average rating of the films that include a certain genre. The following table shows the average ratings by gender calculated in this way, and the number of observations (ratings) for each genre:
 
 |genres      | avg_rating| ratings|
 |:-----------|----------:|-------:|
@@ -1031,14 +1039,13 @@ Outside of the correlations between groups, we see clear perfectly logical assoc
 
 It is important to correctly interpret these groups. As all the correlations are positive and only the strength of the correlation changes, what the data tells us is that if a user gives a high or low rating to one gender, they will also give a high or low rating to the other. For example, the Disney Group shows a close correlation between Animation and Children, which tells us that those who do not like animated films do not enjoy children's films either. On the contrary, those who like animated films also enjoy children's movies.
 
-OJO:::: REVISAR
-
 The problem here is that strong correlations between genres can occur because many movies feature such a combination of genres, or because users who like (or don't like) genre A really also like genre B (or not). On the other hand, the weak correlations in general seem to be due to the fact that few films present certain combinations of genres (Musical-Horror or Animation-Film Noir, for example).
 
-Therefore, we find a situation in which we have:    
-1. strong correlations by genres association, that is not very informative,
-3. real correlations between movie genres,
-2. weak correlations, which are due to the fact that there are few examples in the data.  
+Therefore, we find a situation in which we have:  
+
+1. strong correlations by genres association, that is not very informative,  
+2. real correlations between movie genres,  
+3. weak correlations, which are due to the fact that there are few examples in the data.  
 
 Additionally, since the data grouped by user does not show negative correlations, we cannot use this criterion to establish rules such as "if genre A is preferred, genre B is not preferred".
 
@@ -1053,7 +1060,7 @@ The idea Behind Collaborative Filtering models *is that given rating data by man
 
 To work with recommenderlab, we must first create a rating matrix, selecting the variables *userId*, *movieId* and *rating*. Additionally, it is advisable to clean the matrix by filtering the films with less than a certain number of ratings, *so as not to introduce too much noise in the model*  (Alegría, 2020).
 
-```{r creating_rating_matrix, echo=TRUE}
+```{r creating_rating_matrix, eval=FALSE, include=TRUE}
 
 edx_recom <- edx %>% 
   select(userId, movieId, rating)
@@ -1077,39 +1084,39 @@ In our case, we carried out tests with the following models:
 2. Item Base Collaborative Filtering
 3. Singular Value Decomposition
 
-Below we show the code as an example (commented, to avoid its execution):
+Below we show the code as an example:
 
-```{r recomenderlab_exmple_commented, echo=TRUE, message=FALSE, warning=FALSE}
+```{r recomenderlab_exmple_commented, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 
 # Evaluation shceme ####
 
-# eval_scheme <- evaluationScheme(edx_ui, method = "split", train = 0.9, given = 5)
+eval_scheme <- evaluationScheme(edx_ui, method = "split", train = 0.9, given = 5)
 
 # Train and Test Sets ######
 
-# train <- eval_scheme %>% getData("train")
+train <- eval_scheme %>% getData("train")
 # known <- eval_scheme %>% getData("known")
 # unknown <- eval_scheme %>% getData("unknown")
 
-# Training Models ######
+Training Models ######
 
-# ubcf_model <- Recommender(train, "UBCF")
-# ibcf_model <- Recommender(train, "IBCF")
-# svd_model <- Recommender(train, "SVD")
+ubcf_model <- Recommender(train, "UBCF")
+ibcf_model <- Recommender(train, "IBCF")
+svd_model <- Recommender(train, "SVD")
 
-# Predictions #####
+Predictions #####
 
-# ubcf_pred <- predict(ubcf_model, known, type = "ratings")
-# ibcf_pred <- predict(ibcf_model, known, type = "ratings")
-# svd_pred <- predict(svd_model, known, type = "ratings")
+ubcf_pred <- predict(ubcf_model, known, type = "ratings")
+ibcf_pred <- predict(ibcf_model, known, type = "ratings")
+svd_pred <- predict(svd_model, known, type = "ratings")
 
 # Error ######
 
-# error_calc <- rbind("ubcf" = calcPredictionAccuracy(ubcf_pred, unknown),
-              # "ibcf" = calcPredictionAccuracy(ibcf_pred, unknown),
-              # "svd" = calcPredictionAccuracy(svd_pred, unknown))
+error_calc <- rbind("ubcf" = calcPredictionAccuracy(ubcf_pred, unknown),
+              "ibcf" = calcPredictionAccuracy(ibcf_pred, unknown),
+              "svd" = calcPredictionAccuracy(svd_pred, unknown))
 
-# error_calc
+error_calc
 ```
 
 As we have already discussed in the introduction, we decided to abandon this approach mainly due to the required calculation times. Although, to be totally honest, we must recognize that we would not have been able to select certain parameters correctly, nor explain the results. Nor did we find in the documentation examples with results that were close to the RMSE objectives pursued. Finally, we were unable to determine, through the available documentation, how to add the results of these models to a larger model, and apply the predictions on the validation test when the time came.
@@ -1176,6 +1183,7 @@ rmses <- sapply(lambdas, function(l){
 })
 
 lambda <- lambdas[which.min(rmses)]
+lambda
 
 ```
 
@@ -1237,10 +1245,12 @@ As can be seen, the inclusion of the release year and rating year effects is car
 It should be noted that **this model was not selected as the definitive model immediately after its construction**. Previously, several tests were carried out trying to incorporate the effect of movie genres in the prediction of ratings. We detail these attempts below.
 
 ## 3.3 Attempts with genres
-### 3.3.1 Firts Approach
+### 3.3.1 Firts approach
 
-$$Y_{u,i} = \frac{1}{n}\sum\left(mu + b_i + b_u + b_{my} + b_{ry} + b_g \right) + \epsilon_{u,i}$$
-The first attempt to incorporate genders into the model was based on the separation into rows of the multi-categorical variable called *genres* (see the beginning of the section 2.2.4.1 to review the details of the code). As a reminder, we include here the example tables that we have already seen in the introduction:
+$$Y_{u,i} = \frac{1}{n}\sum\left(mu + b_i + b_u + b_{my} + b_{ry} + bg_{u,i} \right) + \epsilon_{u,i}$$
+with $n$ = number of genres of movie $i$
+
+The first attempt to incorporate genders into the model was based on the separation into rows of the multi-categorical variable called *genres* (see the beginning of the section 2.2.4 to review the details of the code). As a reminder, we include here the example tables that we have already seen in the introduction:
 
 **Original genres variable**
 
@@ -1376,23 +1386,713 @@ The final result shows several lines with the same rating for each user-movie co
 
 Adding observations means altering the original sample, so although it generates optimal results in this specific case, we have preferred not to build our model based on this approach.
 
-### 3.3.2 Second Approach
+### 3.3.2 Second approach
 
 $$Y_{u,i} = mu + b_i + b_u + \sum^K_{k=1} x^k_{u,i}\beta_k + \epsilon_{u,i}$$
 with $x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$.
 
+For this approach, instead of separating the genres of the movies by rows, we use dummy variables. In this way, the number of observations is not altered, but the number of columns. The original data set is modified to add $n-1$ variables (each gender becomes a column, except the value "no genres listed"). If a movie belongs to a certain genre, the value of the corresponding variable will be 1. 
 
+Below we show the code necessary to add the dummy variables, and the table that exemplifies the result (for reasons of space, only *movieId*, *genres*, and three dummy genres are shown):
 
+```{r adding_genres_dummy, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 
+##### Adding dummy variables in train set #####
+# It takes some time!
 
+# replacing "|" by "," ("|" is not interpreted by dummy_columns funtion)
+train_edx_genres <- train_edx %>% 
+  mutate(genres = str_replace_all(genres, '\\|', ','))
 
+# Creating dummy columns
+train_edx_genres <- dummy_columns(train_edx_genres, select_columns = c("genres"), 
+                                  split = ",",
+                                  remove_first_dummy = TRUE)
 
+# Replacing "-" by "_" in Fil-Noir and Sci-Fi 
+train_edx_genres <- train_edx_genres %>% rename(genres_Film_Noir = "genres_Film-Noir",
+                                                genres_Sci_Fi = "genres_Sci-Fi")
 
+##### Adding dummy variables in test set #####
 
+test_edx_genres <- test_edx %>% 
+  mutate(genres = str_replace_all(genres, '\\|', ','))
 
-Lars Hulstaert, 2019: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3
-http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
-https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
-https://programmer.group/data-modeling-factor-analysis.html
-https://stackoverflow.com/questions/40509217/how-to-have-r-corrplot-title-position-correct
-https://cran.r-project.org/web/packages/corrplot/corrplot.pdf
+test_edx_genres <- dummy_columns(test_edx_genres, select_columns = c("genres"), 
+                                 split = ",",
+                                 remove_first_dummy = TRUE)
+
+test_edx_genres <- test_edx_genres %>% rename(genres_Film_Noir = "genres_Film-Noir",
+                                              genres_Sci_Fi = "genres_Sci-Fi")
+
+# Example
+train_edx_genres %>% 
+  select(movieId, genres, genres_Action, genres_Adventure, genres_Sci_Fi) %>% 
+  head() %>% 
+  knitr::kable()
+```
+
+| movieId|genres                        | genres_Action| genres_Adventure| genres_Sci_Fi|
+|-------:|:-----------------------------|-------------:|----------------:|-------------:|
+|     122|Comedy,Romance                |             0|                0|             0|
+|     185|Action,Crime,Thriller         |             1|                0|             0|
+|     292|Action,Drama,Sci-Fi,Thriller  |             1|                0|             1|
+|     316|Action,Adventure,Sci-Fi       |             1|                1|             1|
+|     329|Action,Adventure,Drama,Sci-Fi |             1|                1|             1|
+|     355|Children,Comedy,Fantasy       |             0|                0|             0|
+
+**Constructing the model**  
+
+Once we have added the dummy variables, the next step is to calculate the weight of each of the genders ($B$, in the expression $\sum^K_{k=1} x^k_{u,i}\beta_k$, with $x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$).
+
+For this, we begin to build the model in a similar way to the previous ones:
+
+```{r genres_dummy_bi_bu, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+lambda <- 0.5 #Here we use lambda = 0.5 as best tune finded previously
+
+mu_genres <- mean(train_edx_genres$rating) ##__avg rating #####
+
+b_i_genres <- train_edx_genres %>%
+  group_by(movieId) %>%
+  summarise(b_i_genres = sum(rating - mu_genres)/(n()+lambda)) # __b_i ####
+
+b_u_genres <- train_edx_genres %>% # __b_u ######
+  left_join(b_i_genres, by="movieId") %>%
+  group_by(userId) %>%
+  summarise(b_u_genres = sum(rating - b_i_genres - mu_genres)/(n()+lambda))
+```
+
+Then, we calculate the weight of each genre as the mean of the global rating, minus the regularized average of each rating, minus the movie and user effects. Below we show as an example the calculation of *Beta Action*:
+
+```{r beta_action, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+Beta_Action <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId")%>%
+  summarise(Beta_Action = mean(rating - sum(rating*genres_Action)/
+                                 (sum(genres_Action)+lambda) - b_i_genres - b_u_genres))
+```
+
+```{r betas, eval=FALSE, include=FALSE}
+Beta_Adventure <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Adventure = mean(rating - sum(rating*genres_Adventure)/
+                                    (sum(genres_Adventure)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Animation <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Animation = mean(rating - sum(rating*genres_Animation)/
+                                    (sum(genres_Animation)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Children <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Children = mean(rating - sum(rating*genres_Children)/
+                                   (sum(genres_Children)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Comedy <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Comedy = mean(rating - sum(rating*genres_Comedy)/
+                                 (sum(genres_Comedy)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Fantasy  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Fantasy = mean(rating - sum(rating*genres_Fantasy)/
+                                  (sum(genres_Fantasy)+lambda) - b_i_genres - b_u_genres))
+
+Beta_IMAX  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_IMAX = mean(rating - sum(rating*genres_IMAX)/
+                               (sum(genres_IMAX)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Sci_Fi  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Sci_Fi = mean(rating - sum(rating*genres_Sci_Fi)/
+                                 (sum(genres_Sci_Fi)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Drama  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Drama = mean(rating - sum(rating*genres_Drama)/
+                                (sum(genres_Drama)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Horror <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Horror  = mean(rating - sum(rating*genres_Horror)/
+                                  (sum(genres_Horror)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Mystery <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Mystery  = mean(rating - sum(rating*genres_Mystery)/
+                                   (sum(genres_Mystery)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Romance  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Romance = mean(rating - sum(rating*genres_Romance)/
+                                  (sum(genres_Romance)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Thriller <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Thriller = mean(rating - sum(rating*genres_Thriller)/
+                                   (sum(genres_Thriller)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Crime  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Crime = mean(rating - sum(rating*genres_Crime)/
+                                (sum(genres_Crime)+lambda) - b_i_genres - b_u_genres))
+
+Beta_War  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_War = mean(rating - sum(rating*genres_War)/
+                              (sum(genres_War)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Western  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Western = mean(rating -sum(rating*genres_Western)/
+                                  (sum(genres_Western)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Musical  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Musical = mean(rating - sum(rating*genres_Musical)/
+                                  (sum(genres_Musical)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Documentary  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId")  %>%
+  summarise(Beta_Documentary = mean(rating - sum(rating*genres_Documentary)/
+                                      (sum(genres_Documentary)+lambda) - b_i_genres - b_u_genres))
+
+Beta_Film_Noir  <- 
+  train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  summarise(Beta_Film_Noir = mean(rating - sum(rating*genres_Film_Noir)/
+                                    (sum(genres_Film_Noir)+lambda) - b_i_genres - b_u_genres))
+```
+
+Finally, for each movie, we multiply that weight by the value of the dummy variable, which can be 1 or 0 depending on whether or not the movie belongs to that genre ($x^k_{u,i} = 1$ if $g_{u,i}$ is genre $k$), and we add the weights of the genres.
+
+Here is the code:
+
+```{r b_g_genres, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+# Calculating Sum(XuiK * BetaK), XuiK = 1 if genre = K
+b_g_genres <- train_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>%
+  group_by(movieId) %>% 
+  summarise(b_g_genres = (genres_Action * as.numeric(Beta_Action)) +
+              (genres_Adventure * as.numeric(Beta_Adventure)) +
+              (genres_Children * as.numeric(Beta_Children)) +
+              (genres_Comedy * as.numeric(Beta_Comedy)) +
+              (genres_Fantasy * as.numeric(Beta_Fantasy)) +
+              (genres_IMAX * as.numeric(Beta_IMAX)) +
+              (genres_Sci_Fi * as.numeric(Beta_Sci_Fi)) +
+              (genres_Drama * as.numeric(Beta_Drama)) +
+              (genres_Horror * as.numeric(Beta_Horror)) + 
+              (genres_Mystery * as.numeric(Beta_Mystery)) +
+              (genres_Romance * as.numeric(Beta_Romance)) +
+              (genres_Thriller * as.numeric(Beta_Thriller)) +
+              (genres_Crime * as.numeric(Beta_Crime)) +
+              (genres_War * as.numeric(Beta_War)) +
+              (genres_Western * as.numeric(Beta_Western)) +
+              (genres_Musical * as.numeric(Beta_Musical)) +
+              (genres_Documentary * as.numeric(Beta_Documentary)) +
+              (genres_Film_Noir * as.numeric(Beta_Film_Noir))) %>% 
+  unique()
+
+# Predictions over the test set ####
+
+test_predicted_ratings_genres <- 
+  test_edx_genres %>% 
+  left_join(b_i_genres, by = "movieId") %>%
+  left_join(b_u_genres, by = "userId") %>% 
+  left_join(b_g_genres, by = "movieId") %>%
+  mutate(mu_genres = mu_genres, pred = mu_genres + b_i_genres + 
+           b_u_genres + b_g_genres) %>%
+  .$pred
+
+reg_movie_user_genre_2_rmse <- RMSE(test_predicted_ratings_genres, 
+                                    test_edx_genres$rating)
+reg_movie_user_genre_2_rmse
+```
+
+When applying this model to the test set, we obtain an RMSE of 0.892302. which turns out to be worse than the one obtained with the simple model based only on user and movie effects.
+
+**Going back to the initial model**
+
+It is evident that we have not been able to correctly calculate the weights of each genre, for each user-movie combination.  After several attempts to calculate beta correctly, we decided to return to the model with the best results, although it did not incorporate the genres for rating prediction.
+
+# 4. Results
+
+To calculate the improvement in the RMSE of the model after each iteration, we apply the following formula: 
+$$(RMSE_l - RMSE_p) / RMSE_p$$
+where $RMSE_l$ = Last RMSE, and $RMSE_p$ = Previous RMSE
+
+## 4.1 Models RMSEs
+During the presentation of the final model construction process, we have been informed of the main results in terms of RMSE on the test set. In this section we summarize these results, adding basic models, and the result of the final model on the validation set.
+
+As mentioned in the introduction, the model was built step by step, adding elements one by one in order to know the effect of each one of them.
+
+The first step was to predict the average rating (nothing original), which yielded an RMSE of 1.060167. Then we added the movie effect ($b_i$), and the RMSE dropped to 0.9432171. The next step was to add the user effect ($b_u$), which resulted in an improvement from the previous RMSE of more than 8%. The new RMSE was 0.8651897.
+
+After incorporating the movie and user effects, we applied the regularization process for the first time [^8]. After regularization, the model yielded an RMSE of 0.8650327 on the test set. Although it is an improvement, it is surprisingly small (0.02%).
+
+Until now, our model did not differ in any way from the one presented as an example in the course bibliography. The next two items (movie year effect and rating year effect make the difference).
+
+After adding the effect of the release year ($b_my$), the RMSE on the validation set decreased to 0.8647968, which was a slight improvement of 0.03%. When we add the effect of the rating year ($b_ry$), the RMSE fell a little more to 0.864636 (another 0.02%).
+
+**Genre effets**   
+
+The first approximation $\frac{1}{n}\sum\left(mu + b_i + b_u + b_{my} + b_{ry} + bg_{u,i} \right)$
+yielded an RMSE of 0.8630654 on the test set (which represents an improvement of 0.18%). This was the best RMSE on the test set, but for the reasons explained in previous sections, we finally decided not to apply this model.
+
+Finally, we developed the model based on the expression $\sum^K_{k=1} x^k_{u,i}\beta_k$, which resulted in an RMSE of 0.8922815.
+
+Below is a table that summarizes the results of each model:
+
+|model                   |      rmse|
+|:-----------------------|---------:|
+|mu                      | 1.0601672|
+|bi                      | 0.9432171|
+|bi_bu                   | 0.8651897|
+|reg_bi_bu               | 0.8650327|
+|reg_bi_bu_bmy           | 0.8647968|
+|**reg_bi_bu_bmy_bry**   | 0.8646360|
+|reg_bi_bu_bmy_bry_b_g_1 | 0.8630654|
+|reg_bi_bu_b_g_2         | 0.8922815|
+
+The best model, which does not involve adding observations, turned out to be the one that incorporates movie effects, user effects, movie year effects, and rating year effects.
+
+After selecting this model, we train it with the complete edx data set, and then we apply it to the validation set:
+
+```{r trainig_final_model_edx, echo=TRUE, message=FALSE, warning=FALSE}
+
+# TRAINING THE FINAL MODEL WITH ENTIRE EDX SET
+
+# Here we use the lambdas that we got in the previous step, over the
+# entire edx set (lambda = 0.5)
+
+mu <- mean(edx$rating)
+
+b_i <- edx %>%
+  group_by(movieId) %>%
+  summarise(b_i = sum(rating - mu)/(n()+lambda))
+
+b_u <- edx %>% 
+  left_join(b_i, by="movieId") %>%
+  group_by(userId) %>%
+  summarise(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+b_my <- edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  group_by(movie_year) %>% 
+  summarise(b_my = sum(rating - b_i - b_u - mu)/(n()+lambda))
+
+b_ry <- edx %>% 
+  left_join(b_i, by = 'movieId') %>% 
+  left_join(b_u, by = 'userId') %>% 
+  left_join(b_my, by = 'movie_year') %>% 
+  group_by(rating_year) %>% 
+  summarise(b_ry = sum(rating - b_i - b_u - b_my - mu)/(n()+lambda))
+
+edx_reg_movie_user_myear_ryear_effect_pred <- 
+  edx %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
+  .$pred
+
+# Regularized Movie + User + Movie Year + Rating Year #####
+
+edx_reg_movie_user_myear_ryear_effect_rmse <- 
+  RMSE(edx_reg_movie_user_myear_ryear_effect_pred, edx$rating)
+
+edx_reg_movie_user_myear_ryear_effect_rmse
+
+```
+
+```{r apply_final_mode_validation, echo=TRUE, message=FALSE, warning=FALSE}
+
+# APPLYING THE FINAL MODEL OVER VALIDATION SET
+
+#Now, we apply the final model trained with edx set, over the validation set.
+# Note that this is the first and unique time that we use the validation set.
+
+# Adding rating_date and rating_year to validation set ######
+validation <- validation %>% 
+  mutate(rating_date = as_datetime(timestamp), 
+         rating_year = as.integer(year(rating_date)))
+
+# Creating the new column "movie_year", extracting year from "title" #####
+validation <- validation %>% 
+  mutate(movie_year = str_extract(title, "\\(\\d\\d\\d\\d\\)"))
+
+# Removing (parenthesis)  from "movie_year" column ####
+movie_years_temp <- validation %>% pull(movie_year)
+movie_years_temp <- str_remove_all(movie_years_temp, "\\(")
+movie_years_temp <- str_remove(movie_years_temp, "\\)")
+
+# Adding the cleaned "movie_years_temp" to data set #####
+validation <- validation %>% 
+  mutate(movie_year = as.integer(movie_years_temp))
+
+# Preds over validation set #####
+
+validation_preds <- 
+  validation %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>%
+  .$pred
+
+validation_preds_rmse <- RMSE(validation_preds, validation$rating)
+validation_preds_rmse
+```
+
+The final result was 0.8648047, below the primary objective (0.86490).
+
+## 4.2 Model performance
+
+Although the model shows an RMSE below the main objective, it is far from being a good or optimal model. Of all, the most important elements (those that reduces the RMSE the most) are the average rating and the user effect. The other elements serve to scratch a few tenths. They certainly contribute to achieving the target RMSE. But, as we will see next, the final model is very imprecise in the extremes.
+
+We had already anticipated this in previous chapters: users value the movies they watch, and they watch the movies they think they will like. If we add to this that many old films receive good ratings for what we call the *durability effect*, we find biased data (see the distribution of average ratings per user in section 2.2.2). The model does not have enough data to learn to predict ratings below 2.5, an it tends to overestimate the rating in those cases.
+
+Something similar happens with very high ratings. There are not many movies with a rating of 5, so the model tends to underestimate the prediction. However, and due to the fact that the data are biased, the error is lower in the case of high predictions.
+
+If we stratify the results according to ratings, a simple comparison between actual ratings and predictions shows us that this is true. Below we show random selections of 10 observations, in which we compare ratings versus predictions in the validation set, for the rating strata = 0.5, 3.5 and 5.0:
+
+**Rating = 0.5**  
+
+| movieId| userId|title                                | rating|     pred|
+|-------:|------:|:------------------------------------|------:|--------:|
+|    6771|  11760|Dorm Daze (2003)                     |    0.5| 2.128264|
+|     165|  58160|Die Hard: With a Vengeance (1995)    |    0.5| 2.987814|
+|    1876|  71563|Deep Impact (1998)                   |    0.5| 2.830074|
+|    4022|   1419|Cast Away (2000)                     |    0.5| 2.210958|
+|    6996|  58314|Highlander II: The Quickening (1991) |    0.5| 1.817845|
+|    4015|  63374|Dude, Where's My Car? (2000)         |    0.5| 2.005613|
+|    1918|  16884|Lethal Weapon 4 (1998)               |    0.5| 2.783948|
+|    8870|  51901|Forgotten, The (2004)                |    0.5| 2.504297|
+|    4102|  10803|Eddie Murphy Raw (1987)              |    0.5| 2.265580|
+|    2805|  61674|Mickey Blue Eyes (1999)              |    0.5| 3.094471|
+
+**Rating = 3.5**  
+
+| movieId| userId|title                                              | rating|     pred|
+|-------:|------:|:--------------------------------------------------|------:|--------:|
+|    1517|  11515|Austin Powers: International Man of Mystery (1997) |    3.5| 3.452081|
+|    5970|  58740|My Girl (1991)                                     |    3.5| 3.142291|
+|   35836|  11515|40 Year Old Virgin, The (2005)                     |    3.5| 3.623407|
+|    7254|   1367|Butterfly Effect, The (2004)                       |    3.5| 3.690477|
+|    1955|  59017|Kramer Vs. Kramer (1979)                           |    3.5| 3.835779|
+|   27604|  63746|Suicide Club (Jisatsu saakuru) (2002)              |    3.5| 3.659265|
+|    1225|  16958|Amadeus (1984)                                     |    3.5| 3.918987|
+|    3793|  52108|X-Men (2000)                                       |    3.5| 3.265556|
+|    1376|  10112|Star Trek IV: The Voyage Home (1986)               |    3.5| 3.697440|
+|    4557|  62114|Tucker: The Man and His Dream (1988)               |    3.5| 2.708488|
+
+**Rating = 5**  
+
+| movieId| userId|title                                                                          | rating|     pred|
+|-------:|------:|:------------------------------------------------------------------------------|------:|--------:|
+|    1089|  11075|Reservoir Dogs (1992)                                                          |      5| 3.344221|
+|    1035|  59321|Sound of Music, The (1965)                                                     |      5| 3.972014|
+|    1219|  11088|Psycho (1960)                                                                  |      5| 4.031630|
+|      47|    972|Seven (a.k.a. Se7en) (1995)                                                    |      5| 4.565237|
+|    2398|  59480|Miracle on 34th Street (1947)                                                  |      5| 3.836528|
+|    3993|  64074|Quills (2000)                                                                  |      5| 3.888467|
+|    6874|  16817|Kill Bill: Vol. 1 (2003)                                                       |      5| 3.927189|
+|    2908|  53096|Boys Don't Cry (1999)                                                          |      5| 4.208665|
+|    1019|   9576|20,000 Leagues Under the Sea (1954)                                            |      5| 3.985364|
+|    1198|  62565|Indiana Jones and the Raiders of the Lost Ark (1981)                           |      5| 3.962384|
+
+At first glance, we see that the error is very large when the real rating is very low. We also see that the error decreases when the ratings are close to the average, and that it grows again when the rating is 5.
+
+To demonstrate this with data, and not only by showing tables with random observations, below we include a table and a graph with the RMSEs according to strata:
+
+```{r rmse_stratification, message=FALSE, warning=FALSE, include=FALSE}
+
+# ___________________________________########
+  ##### MODEL PERFORMANCE ######
+# ___________________________________########
+
+validation_preds_rev <- 
+  validation %>% 
+  left_join(b_i, by = "movieId") %>%
+  left_join(b_u, by = "userId") %>%
+  left_join(b_my, by = 'movie_year') %>%
+  left_join(b_ry, by = 'rating_year') %>% 
+  mutate(pred = mu + b_i + b_u + b_my + b_ry) %>% 
+  filter(!is.na(pred)) # NA Filtering
+
+# Stratification according to rating #####
+
+#__Rating = 0.5 ####
+validation_preds_rev_0_5 <- 
+  validation_preds_rev %>% 
+  filter(rating == 0.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_0_5 %>% 
+  sample_n(size = 11) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 1 ####
+validation_preds_rev_1_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 1)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_1_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 1.5 ####
+validation_preds_rev_1_5 <- 
+  validation_preds_rev %>% 
+  filter(rating == 1.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_1_5 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 2 ####
+validation_preds_rev_2_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 2)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_2_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 2.5 ####
+validation_preds_rev_2_5 <-
+  validation_preds_rev %>% 
+  filter(rating == 2.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_2_5 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 3 ####
+validation_preds_rev_3_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 3)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_3_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 3.5 ####
+validation_preds_rev_3_5 <- 
+  validation_preds_rev %>% 
+  filter(rating == 3.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_3_5 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 4 ####
+validation_preds_rev_4_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 4)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_4_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 4.5 ####
+validation_preds_rev_4_5 <- 
+  validation_preds_rev %>% 
+  filter(rating == 4.5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_4_5 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+#__Rating = 5 ####
+validation_preds_rev_5_0 <- 
+  validation_preds_rev %>% 
+  filter(rating == 5)
+
+set.seed(1970, sample.kind="Rounding")
+validation_preds_rev_5_0 %>% 
+  sample_n(size = 10) %>% 
+  group_by(movieId, userId) %>% 
+  select(userId, title, rating, pred) %>% 
+  head(10) %>% 
+  knitr::kable()
+
+# RMSEs stratificacion
+
+rmse_05 <- RMSE(validation_preds_rev_0_5$rating, validation_preds_rev_0_5$pred)
+rmse_05
+
+rmse_1 <- RMSE(validation_preds_rev_1_0$rating, validation_preds_rev_1_0$pred)
+rmse_1
+
+rmse_1_5 <- RMSE(validation_preds_rev_1_5$rating, validation_preds_rev_1_5$pred)
+rmse_1_5
+
+rmse_2_0 <- RMSE(validation_preds_rev_2_0$rating, validation_preds_rev_2_0$pred)
+rmse_2_0
+
+rmse_2_5 <- RMSE(validation_preds_rev_2_5$rating, validation_preds_rev_2_5$pred)
+rmse_2_5
+
+rmse_3_0 <- RMSE(validation_preds_rev_3_0$rating, validation_preds_rev_3_0$pred)
+rmse_3_0
+
+rmse_3_5 <- RMSE(validation_preds_rev_3_5$rating, validation_preds_rev_3_5$pred)
+rmse_3_5
+
+rmse_4_0 <- RMSE(validation_preds_rev_4_0$rating, validation_preds_rev_4_0$pred)
+rmse_4_0
+
+rmse_4_5 <- RMSE(validation_preds_rev_4_5$rating, validation_preds_rev_4_5$pred)
+rmse_4_5
+
+rmse_5_0 <- RMSE(validation_preds_rev_5_0$rating, validation_preds_rev_5_0$pred)
+rmse_5_0
+
+rating_strata <- c(0.5, 1, 1.5, 2.0, 2.5, 3.0, 3.5, 4, 4.5, 5)
+rmses <- c(rmse_05, rmse_1, rmse_1_5, rmse_2_0, rmse_2_5, rmse_3_0, rmse_3_5,
+           rmse_4_0, rmse_4_5, rmse_5_0)
+
+ratings_rmses <- data.frame(rating_strata = rating_strata, rmses = rmses)
+
+```
+
+| rating_strata|     rmses|
+|:-------------|---------:|
+|           0.5| 2.2032752|
+|           1.0| 1.8809196|
+|           1.5| 1.4037031|
+|           2.0| 1.1645977|
+|           2.5| 0.7621174|
+|           3.0| 0.6091640|
+|           3.5| 0.4606147|
+|           4.0| 0.5493017|
+|           4.5| 0.7683026|
+|           5.0| 1.0961568|
+
+```{r preds_vs_rating_scater_plot, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Preds vs Rating Scatter Plot #####
+
+plot(rating_strata, rmses)
+```
+
+As we get closer to the general mean of the training set (3.512465), the error decreases, being minimum in the strata = 3.5. The standard deviation of the ratings in the training set is 1.060331, so we can say that the model fails miserably in strata 0.5, 1, 1.5 and 2, where the RMSEs are much higher than that deviation. In the case of stratum = 5, the error is slightly greater than the general standard deviation.
+
+Where the model does perform reasonably well is in strata 2.5, 3, 3.5, 4 and 4.5. This would explain why, despite failing so clearly at the extremes, the model presents an overall RMSE below target: ratings are concentrated in those strata.
+
+The box plot below shows this in another way. It is easy to observe that in the low ratings (between 0.5 and 2), the variability of the predictions is greater, and 75% of them are well above the real rating. The model also overestimates in the strata between 2.5 and 3, but to a lesser extent. In strata 3.5 it is very accurate. Finally, it tends to predict lower values in strata 4, 4.5 and 5. In summary, predictions tend to be concentrated around the mean:
+
+```{r preds_vs_rating_bolxplot, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+
+# Preds vs Rating Box_Plot #####
+
+rating_preds <- validation_preds_rev %>% 
+  select(rating, pred)
+
+rating_preds %>% 
+  ggplot(aes(as.factor(rating), pred)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.01) +
+  labs(title = "Predictons vs rating Box Plot") +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+```
+
+Next, we show stacked density plots of predictions for integer ratings (1, 2, 3, 4 and 5), where the bias of the model is even more evident. The Y axis shows the number of observations. The most common predictions are for strata 3 and 4, and there are very few predictions in strata 1 and 2.
+
+```{r pred_stacked_density_plots, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
+
+validation_preds_rev %>% 
+  filter(rating == 1 |
+           rating == 2 |
+           rating == 3 |
+           rating == 4 |
+           rating == 5)  %>% 
+  ggplot(aes(pred, y = ..count.., fill = as.factor(rating))) +
+  geom_density(alpha = 0.3, bw = 0.75) +
+  labs(title = "Stratified predictions density plots") +
+  theme(plot.title = element_text(size = 12, face = "bold")) +
+  theme(plot.margin = unit(c(1,0,1,0), "cm"))
+```
+
+[^8]: From here, all the elements are added after applying the regularization.
