@@ -2485,23 +2485,3 @@ validation_preds_rev %>%
   labs(title = "Stratified predictions density plots") +
   theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
-
-  
-
-
-Lars Hulstaert, 2019: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3
-http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
-https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
-https://programmer.group/data-modeling-factor-analysis.html
-https://stackoverflow.com/questions/40509217/how-to-have-r-corrplot-title-position-correct
-https://cran.r-project.org/web/packages/corrplot/corrplot.pdf
-
-
-
-
-
-
-
-
-
-

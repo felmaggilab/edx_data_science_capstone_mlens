@@ -567,7 +567,7 @@ The following table shows the 10 films released in 1940 with the most ratings:
 |Mark of Zorro, The (1940)          |   3.577603|     509|
 |Foreign Correspondent (1940)       |   3.892934|     467|
 
-Here we see 6 films with an average rating higher than 4, and the 10 are on the American cinema podium. In the *edx* dataset, there are only 40 films released in 1940, so the weight of these 10 in the calculation of the average for that year is very high. As we will see later, the Film-Noir genre, produced between 1930 and 1950, has the highest ratings, and this is clearly evident in the trend of average ratings per year.
+Here we see 6 films with an average rating higher than 4, and the 10 are on the cinema podium. In the *edx* dataset, there are only 40 films released in 1940, so the weight of these 10 in the calculation of the average for that year is very high. As we will see later, the Film-Noir genre, produced between 1930 and 1950, has the highest ratings, and this is clearly evident in the trend of average ratings per year.
 
 The list doesn't change much if we sort by average rating:
 
@@ -1043,9 +1043,9 @@ The problem here is that strong correlations between genres can occur because ma
 
 Therefore, we find a situation in which we have:  
 
-1. strong correlations by genres association, that is not very informative,  
-2. real correlations between movie genres,  
-3. weak correlations, which are due to the fact that there are few examples in the data.  
+1. strong correlations by genres association, that is not very informative,
+2. real correlations between movie genres,
+3. weak correlations, which are due to the fact that there are few examples in the data.
 
 Additionally, since the data grouped by user does not show negative correlations, we cannot use this criterion to establish rules such as "if genre A is preferred, genre B is not preferred".
 
@@ -1119,7 +1119,9 @@ error_calc <- rbind("ubcf" = calcPredictionAccuracy(ubcf_pred, unknown),
 error_calc
 ```
 
-As we have already discussed in the introduction, we decided to abandon this approach mainly due to the required calculation times. Although, to be totally honest, we must recognize that we would not have been able to select certain parameters correctly, nor explain the results. Nor did we find in the documentation examples with results that were close to the RMSE objectives pursued. Finally, we were unable to determine, through the available documentation, how to add the results of these models to a larger model, and apply the predictions on the validation test when the time came.
+As we have already discussed in the introduction, we decided to abandon this approach mainly due to the required calculation times (we got no results after multiple tests, even after leaving the code running for more than 24 hours). 
+
+Although, to be totally honest, we must recognize that we would not have been able to select certain parameters correctly, nor explain the results. Nor did we find in the documentation examples with results that were close to the RMSE objectives pursued. Finally, we were unable to determine, through the available documentation, how to add the results of these models to a larger model, and apply the predictions on the validation test.
 
 These considerations eventually convinced us that it was preferable to adopt a conceptually simpler approach, although more complex in terms of coding (the final model does not come from a package).
 
@@ -1663,6 +1665,7 @@ $$(RMSE_l - RMSE_p) / RMSE_p$$
 where $RMSE_l$ = Last RMSE, and $RMSE_p$ = Previous RMSE
 
 ## 4.1 Models RMSEs
+
 During the presentation of the final model construction process, we have been informed of the main results in terms of RMSE on the test set. In this section we summarize these results, adding basic models, and the result of the final model on the validation set.
 
 As mentioned in the introduction, the model was built step by step, adding elements one by one in order to know the effect of each one of them.
@@ -2080,6 +2083,8 @@ rating_preds %>%
 
 Next, we show stacked density plots of predictions for integer ratings (1, 2, 3, 4 and 5), where the bias of the model is even more evident. The Y axis shows the number of observations. The most common predictions are for strata 3 and 4, and there are very few predictions in strata 1 and 2.
 
+Another thing that is clearly seen is that the predictions overlap each other, making it very difficult to determine a simple criterion such as "below this prediction a movie is not recommended, and above this prediction it is recommended".
+
 ```{r pred_stacked_density_plots, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
 
 validation_preds_rev %>% 
@@ -2095,4 +2100,49 @@ validation_preds_rev %>%
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 ```
 
+In short, our model is not capable of predicting low ratings, and it is quite inaccurate at predicting high ratings. We believe that a more complex model could improve this aspect, but not entirely. After all, it is the training data that is biased and whatever we do, the model will learn from those biases.
+
+# 5. Conclusions
+
+During the development process of the final model, we have proposed three different linear models, and we have tested the application of three non-linear algorithms included in the *recommenderlab* package. This last approach did not yield results due to the excessive calculation times required.
+
+The three linear models, in addition to the familiar movie and user effects, include additional variables. In two of them we tested different ways of treating the movie genres, with disparate results. The final model does not include genres among the variables used, but rather the effects of movie year and rating year.
+
+The model finally adopted presents an RMSE below the primary objective, but its performance is far from optimal. Partly because of the limitations of the model itself, and partly because of the bias in the training data, our model is not able to adequately predict low and high ratings.
+
+Put into production, the model could have a negative impact on the user experience if a good decision factor is not applied to govern the recommendations. For example, the system might not recommend movies when the predicted rating is below 3. This could somehow mitigate the fact that the model is not good when the prediction is below 2.5.
+
+However, and although the error is lower in the case of high predictions, it is more serious that the model tends to predict ratings below 4 when the real rating is 5. This means that, if we apply the previous criteria, a movie that the user might have liked will not be recommended. Due to the overlap of predictions, it is not easy to determine a recommendation rule based on predicted ratings.
+
+This is a clear example where, despite achieving the desired RMSE, to put the model into production it is necessary to improve it.
+
+As following lines of action we can mention:
+
+1. Continue investigating the effect of gender, to find the appropriate way to calculate the weights of each one.
+2. Apply advanced models of the Collaborative Filtering type, and see if including latent factors improves the performance of the model.
+3. Experiment with better balanced, or unbiased data sets.
+
 [^8]: From here, all the elements are added after applying the regularization.
+
+
+# References
+
+Hulstaert, Lars (2019). **Black-box vs. white-box models**. Towards data science: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3.
+
+
+# Bibliography and resources
+
+Izarry, Rafael. **Introduction to Data Science. Data Analysis and Prediction Algorithms with R**, 2021. https://rafalab.github.io/dsbook/. 
+
+Alegría, Elías. **Sistemas Recomendadores con recommenderlab**. RPubs, 2020: https://rpubs.com/elias_alegria/intro_recommenderlab.
+
+Taras, Hnot. **Recommender Systems Comparison**. RPubs, 2016: https://rpubs.com/tarashnot/recommender_comparison
+
+Hahsler, Michaael. **recommenderlab: A Framework for Developing an Testing Recommendation Algorithms**. CRAN: https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf
+
+Hahsler, Michaael and Vereet, Bregt. **Package ‘recommenderlab’**. CRAN, 2021: https://cran.rstudio.com/web/packages/recommenderlab/recommenderlab.pdf
+
+
+## Acknowledgments
+
+I would like to express my sincere gratitude to my colleagues, Lourdes Hernández and Mario Martínez, for their support, critical comments, and invaluable guidance in solving some code and concept problems.
