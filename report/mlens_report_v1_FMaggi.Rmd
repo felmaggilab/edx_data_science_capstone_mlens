@@ -197,16 +197,16 @@ It is important to note that the genres variable is multi-categorical. A movie c
 
 The *edx* data frame was divided in a training set, with the 90% of the data, and a test set, and comes from the *movielens* data frame.
 
-In turn, *movielens* data frame contains 10,100,000 observations, of which 10% were set aside to create the validation set. It is important to note that the *validation* set was not used for training, nor to calculate the *Root Mean Square Error* (RMSE) of the model during its construction. 
+In turn, *movielens* data frame contains 10,100,000 observations, of which 10% were set aside to create the *validation* set. It is important to note that the *validation* set was not used for training, nor to calculate the *Root Mean Square Error* (RMSE) of the model during its construction. 
 
 ## 1.2 Goals and key steps
-Our primary goal was to develop a model capable of achieving an RMSE below 0.86490 but, at the same time, manageable in terms of computational capabilities. In a first approach, we try with "Collaborative Filtering" type models using the *recommenderlab* package. However, and after several tests, we realized that to keep the training and validation times within reasonable ranges, it was necessary to work with a much smaller sample of the *edx* data frame than the original. Faced with this situation, we prefer to test a simpler, more approximate linear model that will enable us to work with the complete data frame. The assumption here is that, although the models available in the recommenderlab package could be more powerful, it is preferable to train a simpler model with more data.
+Our primary goal was to develop a model capable of achieving an RMSE below 0.86490 but, at the same time, manageable in terms of computational capabilities. In a first approach, we try with *Collaborative Filtering* type models using the *recommenderlab* package. However, and after several tests, we realized that to keep the training and validation times within reasonable ranges, it was necessary to work with a much smaller sample of the *edx* data frame than the original. Faced with this situation, we prefer to test a simpler, more approximate linear model that will enable us to work with the complete data frame. The assumption here is that, although the models available in the *recommenderlab* package could be more powerful, it is preferable to train a simpler model with more data.
 
 In addition, the approach had other considerable disadvantages for us:
 
 1. The results shown in the references consulted[^2] [^3] were very far by themselves from our objectives in terms of RMSE.
 2. This made us think that the results of the model obtained with the *recommenderlab* package should be incorporated into a more complex model. Despite having even reviewed the original papers of the package[^4] [^5], we could not see how to incorporate the results of the models included in it in our final model.
-3. The references consulted did not allow us to determine how to apply the model on the complete validation test.
+3. The references consulted did not allow us to determine how to apply the model on the *validation* set
 4. Some of the models included in the package are based on techniques related to matrix factorization, Singular Value Decomposition (SVD) and Principal Components Analysis (PCA)[^6]. Our knowledge of them is very introductory. Given the nature of this project, we believe that the appropriate approach is to work on a model that we are able to explain.
 
 After doing an exploratory analysis of the data, we realized that, in addition to the effects of users and movies, it was necessary to take into account the effects related to the year of the movie, the year in which the rating was made, and the genres of each movie.
@@ -246,7 +246,7 @@ The final model, however, does not incorporate the genre effect in either way. T
 
 ## 2.1 Data wrangling
 
-As already described in the introduction, the *edx* data frame presents the variables *userId*, *movieId*, *rating*, *timestamp*, *title*, *genres*.
+As already described in the introduction, the *edx* data frame presents the variables *userId*, *movieId*, *rating*, *timestamp*, *title*, and *genres*.
 
 The title of the film includes the year of release (in parentheses), and the *timestamp* reflects the moment in which a user gave a rating to the film. To explore the effect of these two factors, the first change made to the data frames was to extract the movie's release year from the title and create a new column called *movie_year*. For the same reasons, the *timestamp* was used to create the columns named *rating_date* and *rating_year*. 
 
@@ -535,7 +535,7 @@ edx %>%
 
 Films released between 1930 and 1970 tend to be better rated than those released in other periods, and films released after this period, specially from, 1985 tend to receive the lowest ratings. 
 
-In the *edx* data set, and as expected, the number of films by year of release is not balanced. It grows more or less constantly until the premiere year of 1979, to make a significant leap from 1980:
+In the *edx* data set, as expected, the number of films by year of release is not balanced. It grows more or less constantly until the premiere year of 1979, to make a significant leap from 1980:
 
 ```{r movie_per_realease_year, echo=FALSE, fig.align='center', fig.width=10, message=FALSE, warning=FALSE}
 # Movies per realease year ######
@@ -1095,8 +1095,8 @@ eval_scheme <- evaluationScheme(edx_ui, method = "split", train = 0.9, given = 5
 # Train and Test Sets ######
 
 train <- eval_scheme %>% getData("train")
-# known <- eval_scheme %>% getData("known")
-# unknown <- eval_scheme %>% getData("unknown")
+known <- eval_scheme %>% getData("known")
+unknown <- eval_scheme %>% getData("unknown")
 
 Training Models ######
 
@@ -1110,7 +1110,7 @@ ubcf_pred <- predict(ubcf_model, known, type = "ratings")
 ibcf_pred <- predict(ibcf_model, known, type = "ratings")
 svd_pred <- predict(svd_model, known, type = "ratings")
 
-# Error ######
+# Error calc ######
 
 error_calc <- rbind("ubcf" = calcPredictionAccuracy(ubcf_pred, unknown),
               "ibcf" = calcPredictionAccuracy(ibcf_pred, unknown),
@@ -1242,7 +1242,7 @@ reg_movie_user_myear_ryear_effect_rmse
 
 This model, applied to the test set, yields an RMSE equal to 0.864636. In practice, the elements were added one by one, checking the RMSE on the test set after each iteration. In the results section we will present a table with a summary of the RMSEs obtained during the construction of the model.
 
-As can be seen, the inclusion of the release year and rating year effects is carried out in the same way in which the movie and user effects are added: first the data is grouped by the element to be added, and then its effect is calculated as the regularized average of the ratings, minus the average rating, minus the effects previously calculated.
+As can be seen, the inclusion of the release year and rating year effects is carried out in the same way in which the movie and user effects are added: first the data is grouped by the element to be added, and then its effect is calculated as the average of the ratings, minus the regularized average rating, minus the effects previously calculated.
 
 It should be noted that **this model was not selected as the definitive model immediately after its construction**. Previously, several tests were carried out trying to incorporate the effect of movie genres in the prediction of ratings. We detail these attempts below.
 
@@ -1338,9 +1338,9 @@ reg_movie_user_myear_ryear_effect_genre_rmse
 
 This model gives an RMSE of 0.8630654 on the test set. This RMSE is the lowest of all those obtained, but the model involves adding observations.
 
-Also, to make the final predictions, it is necessary to calculate the mean of the predictions related to each of the combinations of movieId and UserId. This is necessary because by separating the genres by rows, we get several different predictions for the same user and movie combination:
+Also, to make the final predictions, it is necessary to calculate the mean of the predictions related to each of the combinations of *movieId* and *UserId*. This is necessary because by separating the genres by rows, we get several different predictions for the same user and movie combination:
 
-```{r revision_preds_g, echo=TRUE, message=FALSE, warning=FALSE}
+```{r revision_preds_g_1, echo=TRUE, message=FALSE, warning=FALSE}
 
 # Why we use the mean of preds for movieId - UserId combination?
 # Because when we separate genders by row, we can get several preds for
@@ -1363,9 +1363,11 @@ revision_preds_g %>% filter(userId == 325) %>%
   select(userId, movieId, title, genres, rating, pred) %>%
   head(10) %>% 
   knitr::kable()
+```
 
-# So, before to make preds, we group by userId and movieId, and take the mean
-# of the preds:
+So, before to make predictions, we group by userId and movieId, and take the mean:
+
+```{r revision_preds_g_2, echo=TRUE, message=FALSE, warning=FALSE}
 
 revision_preds_g_mean <- 
   test_edx_g %>% 
@@ -1381,10 +1383,9 @@ revision_preds_g_mean %>% filter(userId == 325) %>%
   select(userId, movieId, title, genres, rating, pred) %>%
   head(10) %>% 
   knitr::kable()
-
 ```
 
-The final result shows several lines with the same rating for each user-movie combination.
+The final result shows several lines with the same predicted rating for each user-movie combination.
 
 Adding observations means altering the original sample, so although it generates optimal results in this specific case, we have preferred not to build our model based on this approach.
 
@@ -1676,7 +1677,7 @@ After incorporating the movie and user effects, we applied the regularization pr
 
 Until now, our model did not differ in any way from the one presented as an example in the course bibliography. The next two items (movie year effect and rating year effect make the difference).
 
-After adding the effect of the release year ($b_my$), the RMSE on the validation set decreased to 0.8647968, which was a slight improvement of 0.03%. When we add the effect of the rating year ($b_ry$), the RMSE fell a little more to 0.864636 (another 0.02%).
+After adding the effect of the release year ($b_{my}$), the RMSE on the validation set decreased to 0.8647968, which was a slight improvement of 0.03%. When we add the effect of the rating year ($b_{ry}$), the RMSE fell a little more to 0.864636 (another 0.02%).
 
 **Genre effets**   
 
@@ -2103,15 +2104,15 @@ In short, our model is not capable of predicting low ratings, and it is quite in
 
 # 5. Conclusions
 
-During the development process of the final model, we have proposed three different linear models, and we have tested the application of three non-linear algorithms included in the *recommenderlab* package. This last approach did not yield results due to the excessive calculation times required.
+During the development process of the final model, we have proposed three different linear approaches, and we have tested the application of three non-linear algorithms included in the *recommenderlab* package. This last exercise did not yield results due to the excessive calculation times required.
 
-The three linear models, in addition to the familiar movie and user effects, include additional variables. In two of them we tested different ways of treating the movie genres, with disparate results. The final model does not include genres among the variables used, but rather the effects of movie year and rating year.
+The three linear models, in addition to the movie and user effects, include additional variables. In two of them we tested different ways of treating the movie genres. The final model does not include genres among the variables used, but rather the effects of movie year and rating year.
 
 The model finally adopted presents an RMSE below the primary objective, but its performance is far from optimal. Partly because of the limitations of the model itself, and partly because of the bias in the training data, our model is not able to adequately predict low and high ratings.
 
 Put into production, the model could have a negative impact on the user experience if a good decision factor is not applied to govern the recommendations. For example, the system might not recommend movies when the predicted rating is below 3. This could somehow mitigate the fact that the model is not good when the prediction is below 2.5.
 
-However, and although the error is lower in the case of high predictions, it is more serious that the model tends to predict ratings below 4 when the real rating is 5. This means that, if we apply the previous criteria, a movie that the user might have liked will not be recommended. Due to the overlap of predictions, it is not easy to determine a recommendation rule based on predicted ratings.
+However, and although the error is lower in the case of high predictions, it is more serious the fact that the model tends to predict ratings below 4 when the real rating is 5. This means that, if we apply the previous criteria, a movie that the user might have liked will not be recommended. Due to the overlap of predictions, it is not easy to determine a recommendation rule based on predicted ratings.
 
 This is a clear example where, despite achieving the desired RMSE, to put the model into production it is necessary to improve it.
 
@@ -2129,7 +2130,7 @@ As following lines of action we can mention:
 
 Hulstaert, Lars (2019). *Black-box vs. white-box models*. Towards data science: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3.
 
-Alegría, Elías (2020). **Sistemas Recomendadores con recommenderlab**. RPubs, https://rpubs.com/elias_alegria/intro_recommenderlab.
+Alegría, Elías (2020). *Sistemas Recomendadores con recommenderlab*. RPubs, https://rpubs.com/elias_alegria/intro_recommenderlab.
 
 Hahsler, Michael (2021). *recommenderlab: Lab for Developing and Testing Recommender Algorithms*. R package version 0.2-7. https://github.com/mhahsler/recommenderlab
 
@@ -2142,7 +2143,3 @@ Taras, Hnot. *Recommender Systems Comparison*. RPubs, 2016: https://rpubs.com/ta
 
 Hahsler, Michaael and Vereet, Bregt. *Package ‘recommenderlab’*. CRAN, 2021: https://cran.rstudio.com/web/packages/recommenderlab/recommenderlab.pdf
 
-
-## Acknowledgments
-
-I would like to express my sincere gratitude to my colleagues, Lourdes Hernández and Mario Martínez, for their support, critical comments, and invaluable guidance in solving some code and concept problems.
