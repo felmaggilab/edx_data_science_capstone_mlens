@@ -2136,6 +2136,7 @@ Alegría, Elías (2020). *Sistemas Recomendadores con recommenderlab*. RPubs, ht
 
 Hahsler, Michael (2021). *recommenderlab: Lab for Developing and Testing Recommender Algorithms*. R package version 0.2-7. https://github.com/mhahsler/recommenderlab
 
+
 # Bibliography and resources
 
 Izarry, Rafael. *Introduction to Data Science. Data Analysis and Prediction Algorithms with R*, 2021. https://rafalab.github.io/dsbook/. 
