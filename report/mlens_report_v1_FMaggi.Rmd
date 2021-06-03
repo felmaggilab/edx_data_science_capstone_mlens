@@ -2130,12 +2130,11 @@ As following lines of action we can mention:
 
 # References
 
-Hulstaert, Lars (2019). *Black-box vs. white-box models*. Towards data science: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3.
+Hahsler, Michael (2021). *recommenderlab: Lab for Developing and Testing Recommender Algorithms*. R package version 0.2-7. https://github.com/mhahsler/recommenderlab
 
 Alegría, Elías (2020). *Sistemas Recomendadores con recommenderlab*. RPubs, https://rpubs.com/elias_alegria/intro_recommenderlab.
 
-Hahsler, Michael (2021). *recommenderlab: Lab for Developing and Testing Recommender Algorithms*. R package version 0.2-7. https://github.com/mhahsler/recommenderlab
-
+Hulstaert, Lars (2019). *Black-box vs. white-box models*. Towards data science: https://towardsdatascience.com/machine-learning-interpretability-techniques-662c723454f3.
 
 # Bibliography and resources
 
@@ -2144,4 +2143,10 @@ Izarry, Rafael. *Introduction to Data Science. Data Analysis and Prediction Algo
 Taras, Hnot. *Recommender Systems Comparison*. RPubs, 2016: https://rpubs.com/tarashnot/recommender_comparison
 
 Hahsler, Michaael and Vereet, Bregt. *Package ‘recommenderlab’*. CRAN, 2021: https://cran.rstudio.com/web/packages/recommenderlab/recommenderlab.pdf
+
+Wei, Taiyun and Simko, Viliam. *An Introduction to corrplot Package. Making Correlation Matrix Plot Worth A Thousand Words*. CRAN, 2021: https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+
+Kaplan, Jacob. *Package ‘fastDummies’. Fast Creation of Dummy (Binary) Columns and Rows from Categorical Variables*. CRAN, 2020: https://cran.r-project.org/web/packages/fastDummies/fastDummies.pdf
+
+
 
