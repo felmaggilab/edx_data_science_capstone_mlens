@@ -2471,7 +2471,6 @@ rating_preds %>%
   theme(plot.title = element_text(size = 12, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
   
-
 # Stratified predictions density plots #######
 
 validation_preds_rev %>% 
