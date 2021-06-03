@@ -215,7 +215,7 @@ edx %>%
 head(edx)
 
 # We will use 90% of data to train, and 10% of data to test.
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 test_index <- createDataPartition(y = edx$rating, times = 1, p = 0.1,
                                   list = FALSE)
 train_edx <- edx[-test_index,]
@@ -271,7 +271,7 @@ length(unique(edx$movieId))
 length(unique(edx$userId)) 
 # 69878
 
-# min and max ratings ######
+# Min and max ratings ######
 min(edx$rating)
 max(edx$rating)
 
@@ -306,7 +306,9 @@ sd_rating <- sd(edx$rating) # SD rating ######
 sd_rating
 # 1.060331
 
+# _____________________________#####
 # Distribution of number of ratings by movie ####
+# _____________________________#####
 edx %>% 
   group_by(movieId) %>% 
   mutate(n =  n()) %>% 
@@ -319,7 +321,7 @@ edx %>%
   theme(plot.title = element_text(size = 10, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
-# Top 10 Most Rated Movies ####
+# __Top 10 Most Rated Movies ####
 edx %>% 
   group_by(title) %>% 
   mutate(movie_ratings =  n()) %>% 
@@ -329,7 +331,7 @@ edx %>%
   head(10) %>% 
   knitr::kable()
 
-# The 10 least-rated movies ######
+# __The 10 least-rated movies ######
 edx %>% 
   group_by(title) %>% 
   mutate(movie_ratings =  n()) %>% 
@@ -352,7 +354,7 @@ edx %>%
   theme(plot.title = element_text(size = 10, face = "bold")) +
   theme(plot.margin = unit(c(1,0,1,0), "cm"))
 
-# Top 10 most active users #####
+# __Top 10 most active users #####
 edx %>% 
   group_by(userId) %>% 
   mutate(user_ratings =  n()) %>% 
@@ -362,7 +364,7 @@ edx %>%
   head(10) %>% 
   knitr::kable()
 
-# The 10 least active users ######
+# __The 10 least active users ######
 edx %>% 
   group_by(userId) %>% 
   mutate(user_ratings =  n()) %>% 
@@ -372,7 +374,9 @@ edx %>%
   tail(10) %>% 
   knitr::kable()
 
+# _____________________________#####
 # Distribution of avg. ratings per movie ######
+# _____________________________#####
 edx %>% 
   group_by(movieId) %>% 
   mutate(avg_rating = mean(rating)) %>% 
@@ -394,8 +398,9 @@ edx %>%
   knitr::kable()
 
 # __Regularized (lambda 0.5) ####
-lambda <- 0.5
+lambda <- 0.5 
 
+# This graph was made after tunnig (lines 1571 to 1618)
 edx %>% 
   group_by(movieId) %>% 
   mutate(avg_rating = (sum(rating))/(n()+lambda), movie_ratings = n()) %>% 
@@ -417,6 +422,7 @@ edx %>%
   knitr::kable()
 
 # __Regularized ####
+# This graph was made after tunnig (lines 1571 to 1618)
 edx %>% 
   group_by(movieId) %>% 
   mutate(avg_rating = (sum(rating))/(n()+lambda), movie_ratings = n()) %>% 
@@ -435,7 +441,9 @@ edx %>%
   tail(10) %>% 
   knitr::kable()
 
+# _____________________________#####
 # Distribution of avg. ratings per user ######
+# _____________________________#####
 edx %>% 
   group_by(userId) %>% 
   mutate(avg_rating = mean(rating)) %>% 
@@ -457,6 +465,7 @@ edx %>%
   knitr::kable()
 
 # __Regularized ####
+# This graph was made after tunnig (lines 1571 to 1618)
 edx %>% 
   group_by(userId) %>% 
   mutate(avg_rating = (sum(rating))/(n()+lambda), user_ratings = n()) %>% 
@@ -479,6 +488,7 @@ edx %>%
   knitr::kable()
 
 # __Regularized ####
+# This graph was made after tunnig (lines 1571 to 1618)
 edx %>% 
   group_by(userId) %>% 
   mutate(avg_rating = (sum(rating))/(n()+lambda), user_ratings = n()) %>% 
@@ -487,6 +497,7 @@ edx %>%
   unique() %>% 
   tail(10) %>% 
   knitr::kable()
+
 # NOTE: here we use lambda 0.5 (final model best tune)
 
 edx %>% arrange(movie_year)
@@ -495,7 +506,9 @@ edx %>% arrange(movie_year)
 edx %>% arrange(rating_year)
 # Ratings from 1995 to 2008
 
+# _____________________________#####
 # Visualization of average ratings vs movie_year #####
+# _____________________________#####
 edx %>% 
   group_by(movie_year) %>% 
   summarise(avg_rating = mean(rating)) %>% 
@@ -647,7 +660,9 @@ edx %>%
 # There is a clear effect of the premiere year, on the average ratings. 
 # This must be taken into account in our final model
 
+# _____________________________#####
 # Visualization of average ratings vs rating_year #####
+# _____________________________#####
 edx %>% 
   group_by(rating_year) %>% 
   summarise(rating_avgs = mean(rating)) %>% 
@@ -862,7 +877,7 @@ user_59269 %>%
 
 n <- nrow(edx_g) * 0.1
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 
 sample_edx_g <- sample_n(edx_g, n)
 
@@ -964,6 +979,7 @@ edx_g %>%
   facet_grid(genres ~ .)
 
 # __Grouped by user #####
+  # NOT INCLUDED IN REPORT #
 edx_g %>% 
   filter(!genres == "(no genres listed)") %>%
   group_by(userId) %>% 
@@ -1082,6 +1098,7 @@ corrplot(cor_mat_uid, type = "upper", order = "alphabet",
 cor_mat_uid_2 <- rcorr(as.matrix(spread_edx_g_uid))
 
 #__alphabet order ######
+
 corrplot(cor_mat_uid_2$r, order="alphabet", 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
          tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (alphabet)",
@@ -1094,27 +1111,48 @@ corrplot(cor_mat_uid_2$r, order="hclust", addrect = 9,
          mar=c(0,0,1,0))
 
 #__hclust.method order ######
+# NOT included in report
 corrplot(cor_mat_uid_2$r, order="hclust",  hclust.method = "centroid",
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
          tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (hclust)",
          mar=c(0,0,1,0))
 
 #__AOE order ######
+# NOT included in report
 corrplot(cor_mat_uid_2$r, order="AOE", 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
          tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (hclust)",
          mar=c(0,0,1,0))
 
 #__FPC order ######
+# NOT included in report
 corrplot(cor_mat_uid_2$r, order="FPC", 
          p.mat = cor_mat_uid_2$P, sig.level = 0.05, insig = "blank",
          tl.col = "black", tl.srt = 45, tl.cex = 0.6, title = "Grouped by User Id (FPC)",
          mar=c(0,0,1,0))
 
+# Grouped by movieId: not possible #####
+# NOT included in report
 
+genre_avg_rating_mid <- edx_g %>% 
+  filter(!genres == "(no genres listed)") %>% 
+  group_by(movieId, genres) %>% 
+  summarise(avg_rating = mean(rating))
+
+spread_edx_g_temp_mid <- genre_avg_rating_mid %>% 
+  spread(genres, avg_rating)
+
+spread_edx_g_mid <- as.data.frame(spread_edx_g_temp_mid) %>% 
+  select(Action,Adventure,Animation,Children,Comedy,Crime,
+         Documentary,Drama,Fantasy,"Film-Noir",Horror,IMAX,
+         Musical,Mystery,Romance,"Sci-Fi", Thriller, War, Western)
+
+cor_mat_mid <- cor(spread_edx_g_mid, method = "pearson", use = "complete.obs")
+# Error in cor(spread_edx_g_mid, method = "pearson", use = "complete.obs") : 
+# no complete element pairs
 
 #__Principal component analysis ######
-# Not included in Report!
+# Not included in Report
 
 #Data scaling
 cor_mat_uid_2.sc <- scale(cor_mat_uid_2$r)
@@ -1123,41 +1161,6 @@ cor_mat_uid_2.pc <- prcomp(cor_mat_uid_2.sc)
 summary(cor_mat_uid_2.pc)
 #Judging the number of components
 plot(cor_mat_uid_2.pc, type = "l")
-  
-# Grouped by movieId: not possible #####
-  
-genre_avg_rating_mid <- edx_g %>% 
-    filter(!genres == "(no genres listed)") %>% 
-    group_by(movieId, genres) %>% 
-    summarise(avg_rating = mean(rating))
-  
-spread_edx_g_temp_mid <- genre_avg_rating_mid %>% 
-    spread(genres, avg_rating)
-  
-spread_edx_g_mid <- as.data.frame(spread_edx_g_temp_mid) %>% 
-    select(Action,Adventure,Animation,Children,Comedy,Crime,
-           Documentary,Drama,Fantasy,"Film-Noir",Horror,IMAX,
-           Musical,Mystery,Romance,"Sci-Fi", Thriller, War, Western)
-  
-cor_mat_mid <- cor(spread_edx_g_mid, method = "pearson", use = "complete.obs")
-# Error in cor(spread_edx_g_mid, method = "pearson", use = "complete.obs") : 
-# no complete element pairs
-
-edx_g %>% filter(genres == "Musical" |
-                genres == "Horror") %>% 
-select(title, genres) %>% 
-group_by(title)
-
-edx_g %>% filter(genres == "Film-Noir" |
-                   genres == "Mystery" |
-                   genres == "Crime" |
-                   genres == "Thriller") %>% 
-  head(30) %>% 
-  knitr::kable()
-
-edx_g %>% filter(title == "Outbreak (1995)") %>% 
-  head(30) %>% 
-  knitr::kable()
 
 
 # ___________________________________########
@@ -1228,7 +1231,7 @@ edx_ui <- edx_ui[,colCounts(edx_ui)>= 10]
 # Using a little versión of edx #####
 # Run only if you want test the package.
 
-# set.seed(1970, sample.kind="Rounding")
+# set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 # edx_ui_little <- edx_ui[sample(1:nrow(edx_ui), size=10000),]
 
 # eval_scheme <- evaluationScheme(edx_ui_little, method = "split", train = 0.9, given = 5)
@@ -2114,7 +2117,7 @@ train_predicted_ratings_genres <-
 
 train_genres_rmse <- RMSE(train_predicted_ratings_genres, train_edx_genres$rating)
 train_genres_rmse
-# 0.8838732
+# 0.8838518
 
 # Predictions over the test set ####
 
@@ -2289,7 +2292,7 @@ validation_preds_rev_0_5 %>%
 
 ggplot(aes(dollars_per_day, y = ..count.., fill = group)) +
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_0_5 %>% 
   sample_n(size = 11) %>% 
   group_by(movieId, userId) %>% 
@@ -2302,7 +2305,7 @@ validation_preds_rev_1_0 <-
   validation_preds_rev %>% 
   filter(rating == 1)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_1_0 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
@@ -2315,7 +2318,7 @@ validation_preds_rev_1_5 <-
   validation_preds_rev %>% 
   filter(rating == 1.5)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_1_5 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
@@ -2328,7 +2331,7 @@ validation_preds_rev_2_0 <-
   validation_preds_rev %>% 
   filter(rating == 2)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_2_0 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
@@ -2341,7 +2344,7 @@ validation_preds_rev_2_5 <-
   validation_preds_rev %>% 
   filter(rating == 2.5)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_2_5 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
@@ -2354,7 +2357,7 @@ validation_preds_rev_3_0 <-
   validation_preds_rev %>% 
   filter(rating == 3)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_3_0 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
@@ -2367,7 +2370,7 @@ validation_preds_rev_3_5 <-
   validation_preds_rev %>% 
   filter(rating == 3.5)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_3_5 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
@@ -2380,7 +2383,7 @@ validation_preds_rev_4_0 <-
   validation_preds_rev %>% 
   filter(rating == 4)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_4_0 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
@@ -2393,7 +2396,7 @@ validation_preds_rev_4_5 <-
   validation_preds_rev %>% 
   filter(rating == 4.5)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_4_5 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
@@ -2406,7 +2409,7 @@ validation_preds_rev_5_0 <-
   validation_preds_rev %>% 
   filter(rating == 5)
 
-set.seed(1970, sample.kind="Rounding")
+set.seed(1970, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1970)`
 validation_preds_rev_5_0 %>% 
   sample_n(size = 10) %>% 
   group_by(movieId, userId) %>% 
