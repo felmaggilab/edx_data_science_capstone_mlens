@@ -1,7 +1,7 @@
 ---
 title: "Linear Model for Movie Rating Predictions"
 author: "Felipe Maggi"
-date: "14/4/2021"
+date: "Jun 06, 2021"
 output:
   pdf_document: default
   html_document: default
@@ -1657,7 +1657,9 @@ When applying this model to the test set, we obtain an RMSE of 0.892302. which t
 
 **Going back to the initial model**
 
-It is evident that we have not been able to correctly calculate the weights of each genre, for each user-movie combination.  After several attempts to calculate beta correctly, we decided to return to the model with the best results, although it did not incorporate the genres for rating prediction.
+It is evident that we have not been able to correctly calculate the weights of each genre, for each user-movie combination.  
+
+After several attempts to calculate beta correctly, we decided to return to the model with the best results, although it did not incorporate the genres for rating prediction.
 
 # 4. Results
 
