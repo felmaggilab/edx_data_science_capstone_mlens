@@ -513,7 +513,7 @@ Although this analysis is not particularly original in its approach, it was abso
 
 ### 2.2.3 Times trends
 ### 2.2.3.1 Movie release year
-The *edx* dataset includes movies released between 1915 and 2008, and rated between 1995 and 2008.
+The *edx* dataset includes movies released between 1915 and 2008, and rated between 1995 and 2009.
 
 Although good and bad films have coexisted throughout the history of cinema, it is logical to think that if an old film is recently rated, it must have something special. Either it is really a good movie, or it has become a cult product that people value highly following the dictatorship of the majority (we can call this as the *durability effect*).
 
